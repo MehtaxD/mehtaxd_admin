@@ -1,0 +1,81 @@
+import type { SVGProps } from "react";
+
+type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+const base = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+
+function withSize(icon: React.FC<IconProps>) {
+  return (props: IconProps) => {
+    const { size, ...rest } = props;
+    return icon({ ...base, ...rest, width: size ?? rest.width ?? base.width, height: size ?? rest.height ?? base.height });
+  };
+}
+
+const _SearchIcon = (props: IconProps) => <svg {...base} {...props}><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>;
+const _UserIcon = (props: IconProps) => <svg {...base} {...props}><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>;
+const _BagIcon = (props: IconProps) => <svg {...base} {...props}><path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></svg>;
+const _SunIcon = (props: IconProps) => <svg {...base} {...props}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>;
+const _MoonIcon = (props: IconProps) => <svg {...base} {...props}><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>;
+const _ArrowIcon = (props: IconProps) => <svg {...base} {...props}><path d="M5 12h14M14 7l5 5-5 5"/></svg>;
+const _CheckIcon = (props: IconProps) => <svg {...base} {...props}><path d="m5 12 4 4L19 6"/></svg>;
+const _ShieldIcon = (props: IconProps) => <svg {...base} {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>;
+const _BoltIcon = (props: IconProps) => <svg {...base} {...props}><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></svg>;
+const _HeadsetIcon = (props: IconProps) => <svg {...base} {...props}><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v6H5a1 1 0 0 1-1-1v-5ZM20 14h-3v6h2a1 1 0 0 0 1-1v-5Z"/></svg>;
+const _StarIcon = (props: IconProps) => <svg {...base} {...props} fill="currentColor" stroke="none"><path d="m12 2.8 2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.8-5.4 2.8 1-6-4.4-4.3 6.1-.9L12 2.8Z"/></svg>;
+const _Plus = (props: IconProps) => <svg {...base} {...props}><path d="M12 5v14M5 12h14"/></svg>;
+const _Trash2 = (props: IconProps) => <svg {...base} {...props}><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+const _Edit3 = (props: IconProps) => <svg {...base} {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"/></svg>;
+const _Eye = (props: IconProps) => <svg {...base} {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+const _Filter = (props: IconProps) => <svg {...base} {...props}><path d="M3 3h18v1.5H3Z"/><path d="M7 16.5h10"/><path d="M10 10.5h4"/></svg>;
+const _ChevronDown = (props: IconProps) => <svg {...base} {...props}><path d="M6 9l6 6 6-6"/></svg>;
+const _LayoutDashboard = (props: IconProps) => <svg {...base} {...props}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>;
+const _Gamepad2 = (props: IconProps) => <svg {...base} {...props}><path d="M12 2a10 10 0 0 1 7.5 3.5A7 7 0 0 1 21 11.5a10 10 0 0 1-7.5 12.5A7 7 0 0 1 3 12.5A10 10 0 0 1 12 2Z"/><path d="M12 6v6"/><path d="M9 9h6"/></svg>;
+const _Tags = (props: IconProps) => <svg {...base} {...props}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" x2="7.01" y1="7" y2="7"/></svg>;
+const _Package = (props: IconProps) => <svg {...base} {...props}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>;
+const _ShoppingBag = (props: IconProps) => <svg {...base} {...props}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1 0 8h-8a4 4 0 0 1 0-8Z"/></svg>;
+const _Headset = (props: IconProps) => <svg {...base} {...props}><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v6H5a1 1 0 0 1-1-1v-5ZM20 14h-3v6h2a1 1 0 0 0 1-1v-5Z"/></svg>;
+const _FileText = (props: IconProps) => <svg {...base} {...props}><path d="M14 2v6h6"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2Z"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>;
+const _Search = (props: IconProps) => <svg {...base} {...props}><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>;
+const _Settings = (props: IconProps) => <svg {...base} {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0-2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>;
+const _Users = (props: IconProps) => <svg {...base} {...props}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const _BarChart3 = (props: IconProps) => <svg {...base} {...props}><path d="M3 3v18h18"/><path d="M9 17V9"/><path d="M14 17V5"/><path d="M19 17v-3"/></svg>;
+const _BookOpen = (props: IconProps) => <svg {...base} {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+const _LogOut = (props: IconProps) => <svg {...base} {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>;
+const _Loader2 = (props: IconProps) => <svg {...base} {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
+const _ArrowUpRight = (props: IconProps) => <svg {...base} {...props}><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>;
+const _MessageCircle = (props: IconProps) => <svg {...base} {...props}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>;
+const _RotateCcw = (props: IconProps) => <svg {...base} {...props}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>;
+
+export const SearchIcon = withSize(_SearchIcon);
+export const UserIcon = withSize(_UserIcon);
+export const BagIcon = withSize(_BagIcon);
+export const SunIcon = withSize(_SunIcon);
+export const MoonIcon = withSize(_MoonIcon);
+export const ArrowIcon = withSize(_ArrowIcon);
+export const CheckIcon = withSize(_CheckIcon);
+export const ShieldIcon = withSize(_ShieldIcon);
+export const BoltIcon = withSize(_BoltIcon);
+export const HeadsetIcon = withSize(_HeadsetIcon);
+export const StarIcon = withSize(_StarIcon);
+export const Plus = withSize(_Plus);
+export const Trash2 = withSize(_Trash2);
+export const Edit3 = withSize(_Edit3);
+export const Eye = withSize(_Eye);
+export const Filter = withSize(_Filter);
+export const ChevronDown = withSize(_ChevronDown);
+export const LayoutDashboard = withSize(_LayoutDashboard);
+export const Gamepad2 = withSize(_Gamepad2);
+export const Tags = withSize(_Tags);
+export const Package = withSize(_Package);
+export const ShoppingBag = withSize(_ShoppingBag);
+export const Headset = withSize(_Headset);
+export const FileText = withSize(_FileText);
+export const Search = withSize(_Search);
+export const Settings = withSize(_Settings);
+export const Users = withSize(_Users);
+export const BarChart3 = withSize(_BarChart3);
+export const BookOpen = withSize(_BookOpen);
+export const LogOut = withSize(_LogOut);
+export const Loader2 = withSize(_Loader2);
+export const ArrowUpRight = withSize(_ArrowUpRight);
+export const MessageCircle = withSize(_MessageCircle);
+export const RotateCcw = withSize(_RotateCcw);
