@@ -89,6 +89,9 @@ export default function AdminOrderDetailPage() {
     "text" | "code" | "instructions"
   >("instructions");
   const [communicationLoading, setCommunicationLoading] = useState(false);
+  const [downloadingEvidenceId, setDownloadingEvidenceId] = useState<
+    string | null
+  >(null);
   const [payments, setPayments] = useState<AdminPaymentAttempt[]>([]);
   const [paymentEvents, setPaymentEvents] = useState<AdminPaymentEvent[]>([]);
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(
@@ -172,6 +175,34 @@ export default function AdminOrderDetailPage() {
       );
     } finally {
       setPaymentsLoading(false);
+    }
+  }
+
+  async function downloadEvidence(deliveryId: string) {
+    if (downloadingEvidenceId) return;
+    setDownloadingEvidenceId(deliveryId);
+    setError("");
+    setNotice("");
+    try {
+      const { blob, filename } =
+        await nestjsApi.orders.downloadDeliveryEvidence(params.id, deliveryId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setNotice("Evidence PDF download started.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Evidence PDF could not be downloaded.",
+      );
+    } finally {
+      setDownloadingEvidenceId(null);
     }
   }
 
@@ -654,6 +685,24 @@ export default function AdminOrderDetailPage() {
                             <summary>Raw User-Agent</summary>
                             <code>{delivery.acknowledgement.userAgent}</code>
                           </details>
+                        ) : null}
+                        {delivery.acknowledgement.integrityStatus ===
+                        "valid" ? (
+                          <button
+                            className="adminButton"
+                            type="button"
+                            disabled={downloadingEvidenceId !== null}
+                            onClick={() => void downloadEvidence(delivery.id)}
+                          >
+                            {downloadingEvidenceId === delivery.id ? (
+                              <>
+                                <Loader2 className="adminSpinner" size={15} />
+                                Downloading…
+                              </>
+                            ) : (
+                              "Download Evidence PDF"
+                            )}
+                          </button>
                         ) : null}
                       </section>
                     ) : null}

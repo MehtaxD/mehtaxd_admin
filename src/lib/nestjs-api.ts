@@ -35,6 +35,41 @@ async function request<T>(
   return response.json();
 }
 
+async function download(endpoint: string, fallbackFilename: string) {
+  const response = await fetch(`/api/admin/backend${endpoint}`, {
+    credentials: "same-origin",
+  });
+  if (response.status === 401 && typeof window !== "undefined")
+    window.location.href = "/admin/login";
+  if (!response.ok) {
+    const body = await response.text();
+    let message = body;
+    try {
+      const parsed: unknown = JSON.parse(body);
+      if (typeof parsed === "object" && parsed !== null) {
+        const candidate =
+          (parsed as { message?: unknown; error?: unknown }).message ??
+          (parsed as { error?: unknown }).error;
+        if (typeof candidate === "string") message = candidate;
+      }
+    } catch {
+      // The upstream error was plain text; use it as-is.
+    }
+    throw new Error(message || `Download failed (${response.status}).`);
+  }
+  if (!response.headers.get("content-type")?.includes("application/pdf")) {
+    throw new Error("The evidence PDF response was invalid.");
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+  const candidate = filenameMatch?.[1]?.trim();
+  const filename =
+    candidate && /^[a-zA-Z0-9._-]+\.pdf$/i.test(candidate)
+      ? candidate
+      : fallbackFilename;
+  return { blob: await response.blob(), filename };
+}
+
 export const nestjsApi = {
   auth: {
     login: (email: string, password: string) =>
@@ -265,6 +300,11 @@ export const nestjsApi = {
       }),
     getDeliveries: (id: string) =>
       request<OrderDeliveryList>(`/admin/orders/${id}/deliveries`),
+    downloadDeliveryEvidence: (id: string, deliveryId: string) =>
+      download(
+        `/admin/orders/${id}/deliveries/${deliveryId}/evidence.pdf`,
+        `MehtaXD-dispute-evidence-${id}.pdf`,
+      ),
     getPayments: (id: string) =>
       request<AdminPaymentAttempt[]>(`/admin/orders/${id}/payments`),
     getPaymentEvents: (paymentId: string) =>

@@ -77,7 +77,10 @@ async function refresh(refreshToken: string): Promise<TokenPayload | null> {
   return pending;
 }
 
-export async function adminBackend(path: string, init: RequestInit = {}) {
+const evidencePdfPath =
+  /^\/admin\/orders\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/deliveries\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/evidence\.pdf$/;
+
+export async function adminBackend(path: string, init: RequestInit = {}, binary = false) {
   const jar = await cookies();
   let accessToken = jar.get(ACCESS_COOKIE)?.value;
   const refreshToken = jar.get(REFRESH_COOKIE)?.value;
@@ -92,10 +95,19 @@ export async function adminBackend(path: string, init: RequestInit = {}) {
     rotated = await refresh(refreshToken);
     if (rotated) { accessToken = rotated.accessToken; upstream = await send(); }
   }
-  const body = await upstream.text();
+  const body = binary ? await upstream.arrayBuffer() : await upstream.text();
+  const headers = new Headers({
+    "Content-Type": upstream.headers.get("content-type") || "application/json",
+  });
+  if (binary) {
+    const disposition = upstream.headers.get("content-disposition");
+    if (disposition) headers.set("Content-Disposition", disposition);
+    headers.set("Cache-Control", upstream.headers.get("cache-control") || "private, no-store");
+    headers.set("X-Content-Type-Options", "nosniff");
+  }
   const response = new NextResponse(body || null, {
     status: upstream.status,
-    headers: { "Content-Type": upstream.headers.get("content-type") || "application/json" },
+    headers,
   });
   if (rotated) setAdminCookies(response, rotated);
   if (upstream.status === 401) clearAdminCookies(response);
@@ -122,5 +134,5 @@ export async function proxyAdminRequest(request: Request, backendPath: string) {
     method,
     headers,
     ...(body ? { body } : {}),
-  });
+  }, evidencePdfPath.test(backendPath));
 }

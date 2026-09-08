@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { proxyAdminRequest } from "@/lib/admin-api-route";
 
 const uuid = "[0-9a-fA-F-]{36}";
-const customerUuid = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+const customerUuid =
+  "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const legalPage =
   "(privacy-policy|terms-and-conditions|refund-policy|cookie-policy)";
 const allowed: Record<string, RegExp[]> = {
@@ -12,8 +13,13 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(
       `^admin/(games|categories|products|blogs|orders)/${uuid}(\\?.*)?$`,
     ),
-    new RegExp(`^admin/customers/${customerUuid}(/(orders|notes|audit|wallet))?(\\?.*)?$`),
+    new RegExp(
+      `^admin/customers/${customerUuid}(/(orders|notes|audit|wallet))?(\\?.*)?$`,
+    ),
     new RegExp(`^admin/orders/${uuid}/(chat|deliveries)(\\?.*)?$`),
+    new RegExp(
+      `^admin/orders/${customerUuid}/deliveries/${customerUuid}/evidence\\.pdf$`,
+    ),
     new RegExp(`^admin/orders/${uuid}/payments(\\?.*)?$`),
     new RegExp(`^admin/payments/${uuid}/events(\\?.*)?$`),
   ],
@@ -21,7 +27,9 @@ const allowed: Record<string, RegExp[]> = {
     /^games$/,
     new RegExp(`^games/${uuid}/(categories|products)$`),
     /^admin\/blogs$/,
-    new RegExp(`^admin/customers/${customerUuid}/(revoke-sessions|notes|wallet/credits)$`),
+    new RegExp(
+      `^admin/customers/${customerUuid}/(revoke-sessions|notes|wallet/credits)$`,
+    ),
     new RegExp(`^admin/orders/${uuid}/(chat/messages|deliveries)$`),
   ],
   PATCH: [
@@ -46,7 +54,10 @@ async function handle(
   const query = new URL(request.url).search;
   const candidate = `${path}${query}`;
   if (
-    segments.some((segment) => !/^[a-zA-Z0-9-]+$/.test(segment)) ||
+    segments.some(
+      (segment) =>
+        !/^[a-zA-Z0-9-]+$/.test(segment) && segment !== "evidence.pdf",
+    ) ||
     !allowed[request.method]?.some((pattern) => pattern.test(candidate))
   ) {
     return NextResponse.json(
