@@ -40,6 +40,8 @@ const _Users = (props: IconProps) => <svg {...base} {...props}><path d="M17 21v-
 const _BarChart3 = (props: IconProps) => <svg {...base} {...props}><path d="M3 3v18h18"/><path d="M9 17V9"/><path d="M14 17V5"/><path d="M19 17v-3"/></svg>;
 const _BookOpen = (props: IconProps) => <svg {...base} {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
 const _LogOut = (props: IconProps) => <svg {...base} {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>;
+const _Menu = (props: IconProps) => <svg {...base} {...props}><path d="M4 7h16M4 12h16M4 17h16"/></svg>;
+const _X = (props: IconProps) => <svg {...base} {...props}><path d="m6 6 12 12M18 6 6 18"/></svg>;
 const _Loader2 = (props: IconProps) => <svg {...base} {...props}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
 const _ArrowUpRight = (props: IconProps) => <svg {...base} {...props}><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>;
 const _MessageCircle = (props: IconProps) => <svg {...base} {...props}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>;
@@ -75,6 +77,8 @@ export const Users = withSize(_Users);
 export const BarChart3 = withSize(_BarChart3);
 export const BookOpen = withSize(_BookOpen);
 export const LogOut = withSize(_LogOut);
+export const Menu = withSize(_Menu);
+export const X = withSize(_X);
 export const Loader2 = withSize(_Loader2);
 export const ArrowUpRight = withSize(_ArrowUpRight);
 export const MessageCircle = withSize(_MessageCircle);

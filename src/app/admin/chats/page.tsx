@@ -43,7 +43,7 @@ export default function AdminChatsPage() {
   }, []);
 
   return (
-    <>
+    <div className="adminOperationalPage adminChatsInboxPage">
       <div className="adminPageHead">
         <div>
           <div className="adminEyebrow">Customer communication</div>
@@ -60,7 +60,7 @@ export default function AdminChatsPage() {
         <div className="adminPanel adminOrderState">No order conversations yet.</div>
       ) : (
         <div className="adminOrderTableShell">
-          <table className="adminOrderTable">
+          <table className="adminOrderTable adminOperationalTable adminChatsInboxTable">
             <thead>
               <tr>
                 <th>Order</th>
@@ -73,19 +73,19 @@ export default function AdminChatsPage() {
             </thead>
             <tbody>
               {inbox.items.map((item) => (
-                <tr key={item.orderId}>
-                  <td data-label="Order"><strong>{item.orderNumber}</strong><small>{date(item.updatedAt)}</small></td>
-                  <td data-label="Customer"><strong>{item.customerEmail}</strong><small>{item.customerName || "No name"}</small></td>
-                  <td data-label="Latest">{item.latestMessage ? <><strong>{item.latestMessage.senderType === "admin" ? "MehtaXD" : "Customer"}</strong><small>{item.latestMessage.body.slice(0, 90)}</small></> : <small>No messages</small>}</td>
-                  <td data-label="Status"><span className={`adminOrderBadge ${item.orderStatus.replaceAll("_", "-")}`}>{label(item.orderStatus)}</span><span className={`adminOrderBadge ${item.fulfillmentStatus.replaceAll("_", "-")}`}>{label(item.fulfillmentStatus)}</span></td>
-                  <td data-label="Unread">{item.unreadCount ? <span className="adminOrderBadge confirmed">{item.unreadCount} new</span> : <small>Clear</small>}</td>
-                  <td data-label="Action"><Link className="adminIconButton" href={`/admin/orders/${item.orderId}` as Route}>Open</Link></td>
+                <tr className={item.unreadCount ? "adminInboxUnread" : undefined} key={item.orderId}>
+                  <td className="adminOperationalIdentity" data-label="Order"><strong>{item.orderNumber}</strong><small>{date(item.updatedAt)}</small></td>
+                  <td className="adminOperationalCustomer" data-label="Customer"><strong>{item.customerEmail}</strong><small>{item.customerName || "No name"}</small></td>
+                  <td className="adminOperationalPreview" data-label="Latest">{item.latestMessage ? <><strong>{item.latestMessage.senderType === "admin" ? "MehtaXD" : "Customer"}</strong><small>{item.latestMessage.body.slice(0, 90)}</small></> : <small>No messages</small>}</td>
+                  <td className="adminOperationalOrderStatus" data-label="Status"><span className={`adminOrderBadge ${item.orderStatus.replaceAll("_", "-")}`}>{label(item.orderStatus)}</span><span className={`adminOrderBadge ${item.fulfillmentStatus.replaceAll("_", "-")}`}>{label(item.fulfillmentStatus)}</span></td>
+                  <td className="adminOperationalUnread" data-label="Unread">{item.unreadCount ? <span className="adminOrderBadge confirmed">{item.unreadCount} new</span> : <small>Clear</small>}</td>
+                  <td className="adminOperationalAction" data-label="Action"><Link className="adminIconButton" href={`/admin/orders/${item.orderId}` as Route}>Open chat</Link></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </>
+    </div>
   );
 }

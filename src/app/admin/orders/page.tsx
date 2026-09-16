@@ -143,7 +143,7 @@ export default function AdminOrdersPage() {
   }
 
   return (
-    <>
+    <div className="adminOperationalPage adminOrdersListPage">
       <div className="adminPageHead">
         <div>
           <div className="adminEyebrow">Commerce</div>
@@ -163,7 +163,7 @@ export default function AdminOrdersPage() {
         ))}
       </nav>
 
-      <div className="adminPanel adminOrderFilters">
+      <div className="adminPanel adminOrderFilters adminOperationalFilters">
         <form className="adminOrderSearch" onSubmit={submitSearch}>
           <label htmlFor="order-search">Search</label>
           <div><input id="order-search" value={searchDraft} maxLength={160} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Order number, email, or customer" /><button className="adminButton primary" type="submit">Search</button></div>
@@ -171,28 +171,28 @@ export default function AdminOrdersPage() {
         <label>
           <span>Order status</span>
           <select className="adminSelect" value={orderStatus} onChange={(event) => updateOrderStatus(event.target.value)}>
-            <option value="">All order statuses</option>
+              <option value="">All statuses</option>
             {ORDER_STATUSES.map((status) => <option key={status} value={status}>{label(status)}</option>)}
           </select>
         </label>
         <label>
           <span>Fulfillment</span>
           <select className="adminSelect" value={fulfillmentStatus} onChange={(event) => updateFulfillmentStatus(event.target.value)}>
-            <option value="">All fulfillment statuses</option>
+              <option value="">All statuses</option>
             {FULFILLMENT_STATUSES.map((status) => <option key={status} value={status}>{label(status)}</option>)}
           </select>
         </label>
         <label>
           <span>Payment status</span>
           <select className="adminSelect" value={paymentStatus} onChange={(event) => { setPaymentStatus(event.target.value as PaymentAttemptStatus | ""); setPage(1); }}>
-            <option value="">All payment statuses</option>
+              <option value="">All statuses</option>
             {PAYMENT_STATUSES.map((status) => <option key={status} value={status}>{label(status)}</option>)}
           </select>
         </label>
         <label>
           <span>Payment source</span>
           <select className="adminSelect" value={paymentSource} onChange={(event) => { setPaymentSource(event.target.value as PaymentSource | ""); setPage(1); }}>
-            <option value="">All payment sources</option>
+              <option value="">All sources</option>
             <option value="wallet">Store Credit</option>
             <option value="test">Test Provider</option>
           </select>
@@ -207,7 +207,7 @@ export default function AdminOrdersPage() {
         <label>
           <span>Customer chat</span>
           <select className="adminSelect" value={unread} onChange={(event) => { setUnread(event.target.value as typeof unread); setPage(1); }}>
-            <option value="">All messages</option>
+              <option value="">All chats</option>
             <option value="true">Unread only</option>
             <option value="false">No unread</option>
           </select>
@@ -215,7 +215,7 @@ export default function AdminOrdersPage() {
         <label>
           <span>Reconciliation</span>
           <select className="adminSelect" value={reconciliation} onChange={(event) => { setReconciliation(event.target.value as typeof reconciliation); setPage(1); }}>
-            <option value="">All payments</option>
+              <option value="">All</option>
             <option value="true">Review required</option>
             <option value="false">No review flag</option>
           </select>
@@ -235,7 +235,7 @@ export default function AdminOrdersPage() {
         <div className="adminPanel adminOrderState">No orders match these filters.</div>
       ) : (
         <div className="adminOrderTableShell">
-          <table className="adminOrderTable">
+          <table className="adminOrderTable adminOperationalTable adminOrdersListTable">
             <thead>
               <tr>
                 <th>Order</th>
@@ -252,27 +252,28 @@ export default function AdminOrdersPage() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td data-label="Order">
+                  <td className="adminOperationalIdentity" data-label="Order">
                     <strong>{order.orderNumber}</strong>
                     <small>{summary(order)}</small>
                   </td>
-                  <td data-label="Customer">
+                  <td className="adminOperationalCustomer" data-label="Customer">
                     <span>{order.customerEmail}</span>
                     <small>{order.customerName || "No customer name"}</small>
                   </td>
-                  <td data-label="Total">{money(order.totalMinor, order.currency)} <small>{order.currency}</small></td>
-                  <td data-label="Payment">
+                  <td className="adminOperationalAmount" data-label="Total">{money(order.totalMinor, order.currency)} <small>{order.currency}</small></td>
+                  <td className="adminOperationalPayment" data-label="Payment">
                     <strong>{paymentSourceLabel(order.paymentSource)}</strong>
                     <small>{order.paymentStatus ? label(order.paymentStatus) : "Awaiting attempt"}</small>
                     {order.reconciliationRequired ? <span className="adminOrderReconciliation">Review</span> : null}
                   </td>
-                  <td data-label="Status">{badge(order.orderStatus)}</td>
-                  <td data-label="Fulfillment">{badge(order.fulfillmentStatus)}</td>
-                  <td data-label="Chat">{order.chatUnreadCount ? <span className="adminOrderBadge confirmed">{order.chatUnreadCount} new</span> : <small>Clear</small>}</td>
-                  <td data-label="Created">{date(order.createdAt)}</td>
-                  <td data-label="Actions">
+                  <td className="adminOperationalOrderStatus" data-label="Status">{badge(order.orderStatus)}</td>
+                  <td className="adminOperationalFulfillment" data-label="Fulfillment">{badge(order.fulfillmentStatus)}</td>
+                  <td className="adminOperationalUnread" data-label="Chat">{order.chatUnreadCount ? <span className="adminOrderBadge confirmed">{order.chatUnreadCount} new</span> : <small>Clear</small>}</td>
+                  <td className="adminOperationalDate" data-label="Created">{date(order.createdAt)}</td>
+                  <td className="adminOperationalAction" data-label="Actions">
                     <Link className="adminIconButton" href={`/admin/orders/${order.id}` as Route} aria-label={`Open order ${order.orderNumber}`}>
                       <ArrowUpRight size={16} />
+                      <span className="adminMobileActionLabel">Open order</span>
                     </Link>
                   </td>
                 </tr>
@@ -291,6 +292,6 @@ export default function AdminOrdersPage() {
           Next
         </button>
       </div>
-    </>
+    </div>
   );
 }

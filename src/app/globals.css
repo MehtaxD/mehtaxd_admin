@@ -1,4 +1,4 @@
-@layer reset, base, components;
+@layer reset, base, components, operational;
 
 @layer reset {
   *,
@@ -34,6 +34,426 @@
   a {
     color: inherit;
     text-decoration: none;
+  }
+}
+
+/* Phase 2: operational lists. Keep data tables on wide screens and recompose
+   their existing cells into compact records on narrow operational viewports. */
+@layer operational {
+  .adminOperationalPage {
+    min-width: 0;
+  }
+
+  .adminOperationalPage .adminPageHead {
+    margin-bottom: 20px;
+  }
+
+  .adminOperationalPage .adminPageHead p {
+    max-width: 680px;
+  }
+
+  .adminOperationalFilters {
+    border-radius: 10px;
+    border-left: 3px solid #e6002d;
+    box-shadow: none;
+  }
+
+  .adminOrdersListTable {
+    min-width: 1080px;
+  }
+
+  .adminChatsInboxTable {
+    min-width: 820px;
+  }
+
+  .adminCustomersListTable {
+    min-width: 980px;
+  }
+
+  .adminOperationalTable th {
+    padding-block: 11px;
+    background: #fafafa;
+    color: #727277;
+  }
+
+  .adminOperationalTable th,
+  .adminOperationalTable td {
+    padding-inline: 12px;
+  }
+
+  .adminOrdersListTable th:nth-child(1) { width: 190px; }
+  .adminOrdersListTable th:nth-child(2) { width: 240px; }
+  .adminOrdersListTable th:nth-child(3) { width: 90px; }
+  .adminOrdersListTable th:nth-child(4) { width: 90px; }
+  .adminOrdersListTable th:nth-child(5) { width: 150px; }
+  .adminOrdersListTable th:nth-child(6) { width: 135px; }
+  .adminOrdersListTable th:nth-child(7) { width: 60px; }
+  .adminOrdersListTable th:nth-child(8) { width: 110px; }
+  .adminOrdersListTable th:nth-child(9) { width: 44px; }
+
+  .adminOperationalTable td {
+    min-width: 0;
+    transition: background-color 140ms ease-out;
+  }
+
+  .adminOperationalTable td,
+  .adminOperationalTable strong,
+  .adminOperationalTable small {
+    overflow-wrap: anywhere;
+  }
+
+  .adminOperationalTable .adminOperationalIdentity strong {
+    color: #111113;
+    font-size: 12px;
+    font-weight: 850;
+    letter-spacing: -0.01em;
+  }
+
+  .adminOperationalTable .adminOperationalAmount {
+    color: #171719;
+    font-weight: 850;
+    white-space: nowrap;
+  }
+
+  .adminOperationalTable .adminOperationalAmount small {
+    display: inline;
+    margin-left: 3px;
+  }
+
+  .adminOperationalTable .adminOperationalPreview small {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.45;
+  }
+
+  .adminChatsInboxTable .adminOperationalOrderStatus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .adminOperationalTable tr.adminInboxUnread td:first-child {
+    box-shadow: inset 3px 0 #e6002d;
+  }
+
+  .adminOperationalTable tr.adminInboxUnread .adminOperationalIdentity strong,
+  .adminOperationalTable tr.adminInboxUnread .adminOperationalPreview strong {
+    color: #b80024;
+  }
+
+  .adminOperationalTable .adminOperationalAction {
+    text-align: right;
+  }
+
+  .adminOperationalTable .adminOperationalAction .adminIconButton {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+    margin-left: auto;
+    color: #b80024;
+    white-space: nowrap;
+    transition: border-color 140ms ease-out, background-color 140ms ease-out,
+      color 140ms ease-out, transform 100ms ease-out;
+  }
+
+  .adminChatsInboxTable .adminOperationalAction .adminIconButton {
+    width: auto;
+    padding-inline: 12px;
+  }
+
+  .adminMobileActionLabel {
+    display: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .adminOperationalTable tbody tr:hover td {
+      background: #fffafb;
+    }
+  }
+
+  @media (min-width: 901px) {
+    .adminOrdersListTable .adminOperationalIdentity strong {
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .adminOperationalPage .adminPageHead {
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .adminOperationalPage .adminPageHead > .adminButton,
+    .adminOperationalPage .adminOrderQueues button,
+    .adminOperationalPage .adminOrderPager .adminButton,
+    .adminOperationalFilters .adminButton,
+    .adminOperationalFilters .adminSelect,
+    .adminOperationalFilters input {
+      min-height: 44px;
+    }
+
+    .adminOperationalPage .adminPageHead > .adminButton {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .adminOperationalPage .adminOrderQueues {
+      margin-inline: -2px;
+      padding: 2px 2px 8px;
+      scroll-snap-type: x proximity;
+    }
+
+    .adminOperationalPage .adminOrderQueues button {
+      scroll-snap-align: start;
+    }
+
+    .adminOrderFilters.adminOperationalFilters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .adminOrderFilters.adminOperationalFilters .adminOrderSearch {
+      grid-column: 1 / -1;
+    }
+
+    .adminOrderFilters.adminOperationalFilters > div {
+      align-self: center;
+    }
+
+    .adminCustomerFilters.adminOperationalFilters {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .adminCustomerFilters.adminOperationalFilters form {
+      grid-column: 1 / -1;
+      min-width: 0;
+    }
+
+    .adminCustomerFilters.adminOperationalFilters > label {
+      min-width: 0;
+    }
+
+    .adminCustomerFilters.adminOperationalFilters .adminCustomerTotal {
+      align-self: center;
+      justify-items: end;
+      margin-left: 0;
+      padding: 0;
+    }
+
+    .adminOperationalPage .adminOrderState {
+      min-height: 190px;
+      padding: 28px 18px;
+    }
+
+    .adminOperationalPage .adminOrderTableShell {
+      overflow: visible;
+      border: 1px solid #dedee2;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .adminOperationalTable,
+    .adminOperationalTable tbody {
+      display: grid;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .adminOperationalTable thead {
+      display: none;
+    }
+
+    .adminOperationalTable tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(108px, auto);
+      gap: 11px 14px;
+      min-width: 0;
+      padding: 14px;
+      border: 0;
+      border-bottom: 1px solid #e8e8eb;
+      border-radius: 0;
+      background: #fff;
+    }
+
+    .adminOperationalTable tr:last-child {
+      border-bottom: 0;
+    }
+
+    .adminOperationalTable td,
+    .adminOperationalTable tr:last-child td {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      align-content: start;
+      gap: 3px;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      line-height: 1.35;
+    }
+
+    .adminOperationalTable td::before {
+      content: attr(data-label);
+      color: #8a8a90;
+      font-size: 9px;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .adminOperationalTable .adminOperationalIdentity::before,
+    .adminOperationalTable .adminOperationalCustomer::before,
+    .adminOperationalTable .adminOperationalAmount::before,
+    .adminOperationalTable .adminOperationalPreview::before,
+    .adminOperationalTable .adminOperationalAction::before {
+      display: none;
+    }
+
+    .adminOperationalTable .adminOperationalIdentity strong {
+      font-size: 13px;
+    }
+
+    .adminOperationalTable .adminOperationalAmount {
+      justify-items: end;
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .adminOperationalTable .adminOperationalAction {
+      align-self: end;
+    }
+
+    .adminOperationalTable .adminOperationalAction .adminIconButton {
+      width: auto;
+      min-width: 44px;
+      min-height: 44px;
+      gap: 7px;
+      padding-inline: 12px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .adminMobileActionLabel {
+      display: inline;
+    }
+
+    .adminOperationalTable .adminOrderBadge,
+    .adminOperationalTable .adminCustomerStatus,
+    .adminOperationalTable .adminCustomerProvider {
+      font-size: 9px;
+    }
+
+    .adminOrdersListTable .adminOperationalIdentity { grid-column: 1; grid-row: 1; }
+    .adminOrdersListTable .adminOperationalAmount { grid-column: 2; grid-row: 1; }
+    .adminOrdersListTable .adminOperationalCustomer { grid-column: 1 / -1; grid-row: 2; }
+    .adminOrdersListTable .adminOperationalPayment { grid-column: 1; grid-row: 3; }
+    .adminOrdersListTable .adminOperationalOrderStatus { grid-column: 2; grid-row: 3; }
+    .adminOrdersListTable .adminOperationalFulfillment { grid-column: 1; grid-row: 4; }
+    .adminOrdersListTable .adminOperationalUnread { grid-column: 2; grid-row: 4; }
+    .adminOrdersListTable .adminOperationalDate { grid-column: 1; grid-row: 5; }
+    .adminOrdersListTable .adminOperationalAction { grid-column: 2; grid-row: 5; }
+
+    .adminChatsInboxTable tr {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .adminChatsInboxTable tr.adminInboxUnread {
+      box-shadow: inset 3px 0 #e6002d;
+    }
+
+    .adminChatsInboxTable .adminOperationalIdentity { grid-column: 1; grid-row: 1; }
+    .adminChatsInboxTable .adminOperationalUnread { grid-column: 2; grid-row: 1; justify-items: end; }
+    .adminChatsInboxTable .adminOperationalCustomer { grid-column: 1 / -1; grid-row: 2; }
+    .adminChatsInboxTable .adminOperationalPreview { grid-column: 1 / -1; grid-row: 3; padding-block: 2px; }
+    .adminChatsInboxTable .adminOperationalOrderStatus { grid-column: 1; grid-row: 4; }
+    .adminChatsInboxTable .adminOperationalAction { grid-column: 2; grid-row: 4; }
+
+    .adminCustomersListTable tr {
+      grid-template-columns: minmax(0, 1fr) minmax(112px, auto);
+    }
+
+    .adminCustomersListTable .adminOperationalIdentity { grid-column: 1; grid-row: 1; }
+    .adminCustomersListTable .adminOperationalOrderStatus { grid-column: 2; grid-row: 1; justify-items: end; }
+    .adminCustomersListTable .adminOperationalProviders { grid-column: 1; grid-row: 2; }
+    .adminCustomersListTable .adminOperationalVerified { grid-column: 2; grid-row: 2; }
+    .adminCustomersListTable .adminOperationalActivity { grid-column: 1; grid-row: 3; }
+    .adminCustomersListTable .adminOperationalDate { grid-column: 2; grid-row: 3; }
+    .adminCustomersListTable .adminOperationalCreated { grid-column: 1; grid-row: 4; }
+    .adminCustomersListTable .adminOperationalAction { grid-column: 2; grid-row: 4; }
+
+    .adminOperationalPage .adminOrderPager {
+      justify-content: space-between;
+      margin-top: 14px;
+    }
+  }
+
+  @media (min-width: 600px) and (max-width: 900px) {
+    .adminOrderFilters.adminOperationalFilters {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .adminOrderFilters.adminOperationalFilters .adminOrderSearch {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .adminOperationalTable tr {
+      gap-block: 9px;
+      padding: 12px;
+    }
+
+    .adminOperationalTable .adminOperationalAction .adminIconButton {
+      border-color: #f0b5c0;
+      background: #fff4f6;
+      color: #b80024;
+    }
+  }
+
+  @media (max-width: 350px) {
+    .adminOperationalTable tr,
+    .adminCustomersListTable tr {
+      grid-template-columns: minmax(0, 1fr) minmax(102px, auto);
+      gap-inline: 10px;
+      padding: 12px;
+    }
+
+    .adminOperationalTable .adminOperationalAction .adminIconButton {
+      padding-inline: 10px;
+    }
+  }
+
+  @media (max-width: 410px) {
+    .adminCustomerFilters.adminOperationalFilters form > div {
+      display: flex;
+      grid-template-columns: none;
+      padding-top: 0;
+    }
+
+    .adminCustomerFilters.adminOperationalFilters form .adminButton {
+      grid-column: auto;
+      min-height: 44px;
+      margin-left: 0;
+      border: 0;
+      border-left: 1px solid #eee;
+      border-radius: 0 8px 8px 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .adminOperationalTable td,
+    .adminOperationalTable .adminOperationalAction .adminIconButton {
+      transition-duration: 1ms;
+    }
   }
 }
 
@@ -1402,7 +1822,8 @@
   /* Admin-specific styles */
   .adminApp {
     min-height: 100vh;
-    background: #f7f7f8;
+    min-width: 0;
+    background: #f5f5f6;
     color: #151515;
     display: flex;
     font-family: var(--font-body);
@@ -1411,21 +1832,22 @@
   .adminSidebar {
     width: 250px;
     flex: 0 0 250px;
-    background: #fff;
-    border-right: 1px solid #e8e8e8;
+    background: #fcfcfc;
+    border-right: 1px solid #dfdfe2;
     display: flex;
     flex-direction: column;
     position: sticky;
     top: 0;
-    height: 100vh;
-    padding: 22px 14px;
+    height: 100dvh;
+    padding: 20px 12px 16px;
   }
 
   .adminBrand {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 4px 10px 20px;
+    min-height: 44px;
+    padding: 3px 10px 17px;
     font-family: var(--font-display);
     font-size: 22px;
     font-weight: 900;
@@ -1467,6 +1889,10 @@
   .adminNav {
     display: grid;
     gap: 3px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 2px;
   }
 
   .adminNav a,
@@ -1474,11 +1900,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 11px;
-    border-radius: 9px;
+    min-height: 44px;
+    padding: 9px 12px;
+    border-radius: 7px;
     color: #626262;
     font-size: 13px;
     font-weight: 700;
+    position: relative;
+    transition: background-color 140ms ease-out, color 140ms ease-out;
   }
 
   .adminNav a:hover,
@@ -1491,16 +1920,63 @@
     outline: 2px solid #e6002d;
   }
 
+  .adminNav a[aria-current="page"] {
+    background: #fff0f3;
+    color: #b80024;
+  }
+
+  .adminNav a[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    bottom: 12px;
+    left: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: #e6002d;
+  }
+
   .adminSidebarBottom {
     margin-top: auto;
     display: grid;
     gap: 5px;
+    padding-top: 10px;
+    border-top: 1px solid #ececef;
   }
 
   .adminSidebarBottom span {
     padding: 10px;
     color: #aaa;
     font-size: 10px;
+  }
+
+  .adminSignOut {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #c50027;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: background-color 140ms ease-out, color 140ms ease-out,
+      transform 100ms ease-out;
+  }
+
+  .adminSignOut:hover {
+    background: #fff0f3;
+    color: #a60020;
+  }
+
+  .adminSignOut:active,
+  .adminMenuButton:active,
+  .adminDrawerClose:active {
+    transform: scale(0.97);
   }
 
   .adminMain {
@@ -1512,7 +1988,8 @@
     height: 68px;
     background: #fff;
     border-bottom: 1px solid #e8e8e8;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     justify-content: space-between;
     padding: 0 30px;
@@ -1521,8 +1998,9 @@
     z-index: 20;
   }
 
-  .adminTopbar > div:first-child {
+  .adminTopIdentity {
     display: grid;
+    min-width: 0;
     line-height: 1.1;
   }
 
@@ -1548,6 +2026,9 @@
 
   .adminTopActions a {
     color: #e6002d;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .adminStatus {
@@ -1558,6 +2039,83 @@
     padding: 32px;
     max-width: 1400px;
     margin: 0 auto;
+  }
+
+  .adminMenuButton,
+  .adminDrawerClose {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    border: 1px solid #dedee2;
+    border-radius: 9px;
+    background: #fff;
+    color: #19191b;
+    cursor: pointer;
+    transition: border-color 140ms ease-out, background-color 140ms ease-out,
+      transform 100ms ease-out;
+  }
+
+  .adminMobileNav {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  .adminMobileNav::backdrop {
+    background: rgba(18, 18, 20, 0.48);
+    opacity: 1;
+    transition: opacity 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .adminMobileDrawer {
+    width: min(326px, calc(100vw - 42px));
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    padding: max(18px, env(safe-area-inset-top)) 12px
+      max(14px, env(safe-area-inset-bottom));
+    background: #fcfcfc;
+    border-right: 1px solid #dedee2;
+    box-shadow: 18px 0 48px rgba(18, 18, 20, 0.18);
+    transform: translateX(0);
+    transition: transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .adminMobileNav[data-closing="true"] .adminMobileDrawer {
+    transform: translateX(-100%);
+    transition-duration: 160ms;
+  }
+
+  .adminMobileNav[data-closing="true"]::backdrop {
+    opacity: 0;
+    transition-duration: 160ms;
+  }
+
+  .adminDrawerClose {
+    position: absolute;
+    z-index: 2;
+    top: max(17px, env(safe-area-inset-top));
+    right: 14px;
+  }
+
+  .adminMobileDrawer .adminBrand {
+    padding-right: 56px;
+  }
+
+  html.adminNavOpen,
+  html.adminNavOpen body {
+    overflow: hidden;
   }
 
   .adminPageHead {
@@ -2220,6 +2778,288 @@
     align-items: start;
   }
 
+  .adminOrderChatWorkspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 292px;
+    min-width: 0;
+    margin-bottom: 18px;
+    border: 1px solid #dedede;
+    background: #111;
+  }
+
+  .adminOrderChatPanel {
+    min-width: 0;
+    padding: 18px;
+    background: #fff;
+  }
+
+  .adminOrderChatHead,
+  .adminChatHeadActions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .adminOrderChatHead h2 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+
+  .adminOrderChatHead p {
+    margin: 4px 0 0;
+    color: #777;
+    font-size: 11px;
+  }
+
+  .adminChatRefresh {
+    min-height: 40px;
+  }
+
+  .adminChatConnection {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #777;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .adminChatConnection::before {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+  }
+
+  .adminChatConnection.reconnecting { color: #b45309; }
+  .adminChatConnection.restored { color: #15803d; }
+
+  .adminChatSafety {
+    margin-top: 14px;
+    padding-block: 9px;
+    font-size: 11px;
+  }
+
+  .adminChatViewportShell {
+    position: relative;
+    min-width: 0;
+    margin-top: 12px;
+    border-block: 1px solid #ededed;
+    background: #f7f7f7;
+  }
+
+  .adminChatViewport {
+    height: clamp(320px, 46vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    align-content: start;
+    gap: 9px;
+    padding: 18px;
+    overscroll-behavior: contain;
+    scrollbar-color: #c5c5c5 transparent;
+    scrollbar-width: thin;
+  }
+
+  .adminChatLoading {
+    position: absolute;
+    z-index: 2;
+    inset: 12px auto auto 50%;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+    padding: 7px 10px;
+    border: 1px solid #e2e2e2;
+    background: #fff;
+    color: #777;
+    font-size: 11px;
+  }
+
+  .adminChatMessages.adminChatViewport li {
+    width: fit-content;
+    max-width: min(78%, 680px);
+    border: 0;
+    border-radius: 14px 14px 14px 4px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(0, 0, 0, 0.06);
+    animation: adminMessageIn 160ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .adminChatMessages.adminChatViewport li.staff {
+    border: 0;
+    border-radius: 14px 14px 4px 14px;
+    background: #fff0f3;
+    box-shadow: 0 5px 18px rgba(110, 0, 22, 0.07);
+  }
+
+  .adminChatMessages.adminChatViewport li.empty {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+    padding: 38px 18px;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-align: center;
+  }
+
+  .adminChatViewport .adminMessageMeta {
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .adminChatViewport strong {
+    font-size: 10px;
+    letter-spacing: .07em;
+  }
+
+  .adminChatViewport time {
+    white-space: nowrap;
+    font-size: 9px;
+  }
+
+  .adminChatViewport p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-size: 13px;
+    line-height: 1.48;
+  }
+
+  .adminChatViewport .adminMessageReceipt {
+    align-items: center;
+    transition: color 140ms ease, opacity 140ms ease;
+  }
+
+  .adminReceiptTicks {
+    font-size: 11px !important;
+    letter-spacing: -0.18em;
+  }
+
+  .adminChatJump {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid #dedede;
+    border-radius: 999px;
+    background: #111;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .16);
+    color: #fff;
+    font: 800 11px/1 var(--font-body);
+    cursor: pointer;
+  }
+
+  .adminOrderChatPanel .adminChatComposer {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+    padding-top: 12px;
+  }
+
+  .adminOrderChatPanel .adminChatComposer textarea {
+    field-sizing: content;
+    min-height: 44px;
+    max-height: 132px;
+    resize: none;
+    border-color: #dcdcdc;
+    border-radius: 11px;
+    padding: 10px 12px;
+  }
+
+  .adminOrderChatPanel .adminChatComposer textarea:focus-visible {
+    border-color: #e6002d;
+    outline: 3px solid rgba(230, 0, 45, .12);
+  }
+
+  .adminChatSend {
+    min-width: 104px;
+    min-height: 44px;
+    justify-content: center;
+    transition: transform 100ms ease, background-color 140ms ease;
+  }
+
+  .adminChatSend:active:not(:disabled) { transform: translateY(1px); }
+
+  .adminOrderSupportContext {
+    min-width: 0;
+    padding: 20px;
+    color: #fff;
+  }
+
+  .adminSupportCustomer {
+    display: grid;
+    gap: 4px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #292929;
+  }
+
+  .adminSupportCustomer span,
+  .adminOrderSupportContext dt {
+    color: #8d8d8d;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .adminSupportCustomer strong {
+    overflow-wrap: anywhere;
+    font-size: 15px;
+  }
+
+  .adminSupportCustomer a {
+    overflow-wrap: anywhere;
+    color: #bbb;
+    font-size: 11px;
+    text-decoration-color: #555;
+    text-underline-offset: 3px;
+  }
+
+  .adminOrderSupportContext dl {
+    display: grid;
+    gap: 0;
+    margin: 8px 0 14px;
+  }
+
+  .adminOrderSupportContext dl > div {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #242424;
+  }
+
+  .adminOrderSupportContext dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #f4f4f4;
+    font-size: 11px;
+    text-align: right;
+  }
+
+  .adminOrderSupportContext .adminOrderBadge {
+    border-color: #3b3b3b;
+    background: #202020;
+    color: #f1f1f1;
+  }
+
+  .adminOrderSupportContext .adminTextLink {
+    color: #fff;
+  }
+
+  @keyframes adminMessageIn {
+    from { opacity: .55; transform: translateY(4px); }
+  }
+
   .adminOrderDetailMain {
     min-width: 0;
   }
@@ -2318,6 +3158,7 @@
   }
 
   .adminOrderItemImage {
+    position: relative;
     width: 76px;
     height: 76px;
     display: grid;
@@ -2331,6 +3172,8 @@
   }
 
   .adminOrderItemImage img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -2768,16 +3611,52 @@
       grid-template-columns: 1fr;
     }
 
+    .adminOrderChatWorkspace {
+      grid-template-columns: minmax(0, 1fr) 260px;
+    }
+
     .adminOrderMetrics {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .adminSidebar {
       display: none;
     }
 
+    .adminTopbar {
+      height: 64px;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 0 20px;
+    }
+
+    .adminMenuButton,
+    .adminDrawerClose {
+      display: inline-flex;
+    }
+
+    .adminContent {
+      padding: 24px;
+    }
+
+    .adminOrderDetailGrid {
+      grid-template-columns: minmax(0, 1fr) 250px;
+    }
+
+    @starting-style {
+      .adminMobileNav[open] .adminMobileDrawer {
+        transform: translateX(-100%);
+      }
+
+      .adminMobileNav[open]::backdrop {
+        opacity: 0;
+      }
+    }
+  }
+
+  @media (max-width: 760px) {
     .adminContent {
       padding: 20px;
     }
@@ -2862,6 +3741,47 @@
       grid-template-columns: 1fr;
     }
 
+    .adminOrderChatPanel {
+      padding: 14px;
+    }
+
+    .adminOrderChatWorkspace {
+      grid-template-columns: 1fr;
+    }
+
+    .adminOrderDetailGrid {
+      grid-template-columns: 1fr;
+    }
+
+    .adminOrderSupportContext {
+      padding: 16px 18px;
+    }
+
+    .adminOrderSupportContext dl {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0 22px;
+    }
+
+    .adminOrderSupportContext dl > div {
+      grid-template-columns: 1fr;
+      align-content: start;
+    }
+
+    .adminOrderSupportContext dd {
+      margin-top: 3px;
+      text-align: left;
+    }
+
+    .adminChatViewport {
+      height: clamp(250px, 48dvh, 400px);
+      padding: 14px 10px;
+    }
+
+    .adminChatViewport li {
+      max-width: 88%;
+      padding: 10px 12px;
+    }
+
     .adminOrderItems article {
       grid-template-columns: 1fr;
     }
@@ -2883,6 +3803,101 @@
       grid-column: 1;
       grid-row: auto;
       justify-self: start;
+    }
+  }
+
+  @media (max-width: 430px) {
+    .adminTopbar {
+      gap: 10px;
+      padding-inline: 14px;
+    }
+
+    .adminTopActions a {
+      display: none;
+    }
+
+    .adminContent {
+      padding: 18px 14px 24px;
+    }
+
+    .adminPageHead h1 {
+      overflow-wrap: anywhere;
+      font-size: clamp(23px, 8vw, 30px);
+    }
+
+    .adminOrderChatHead {
+      align-items: flex-start;
+    }
+
+    .adminChatHeadActions {
+      align-items: flex-end;
+      flex-direction: column-reverse;
+      gap: 6px;
+    }
+
+    .adminChatRefresh {
+      width: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    .adminChatRefresh span { display: none; }
+
+    .adminChatConnection {
+      white-space: nowrap;
+      font-size: 10px;
+    }
+
+    .adminChatSafety {
+      line-height: 1.4;
+    }
+
+    .adminChatViewport {
+      height: clamp(230px, 47dvh, 360px);
+    }
+
+    .adminChatViewport li {
+      max-width: 92%;
+    }
+
+    .adminChatViewport .adminMessageMeta {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .adminChatComposer {
+      grid-template-columns: minmax(0, 1fr) 48px;
+      gap: 8px;
+    }
+
+    .adminChatSend {
+      min-width: 48px;
+      width: 48px;
+      padding: 0;
+    }
+
+    .adminChatSend span { display: none; }
+
+    .adminOrderSupportContext dl { gap: 0 14px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .adminMobileDrawer,
+    .adminMobileNav::backdrop,
+    .adminMenuButton,
+    .adminDrawerClose,
+    .adminSignOut {
+      transition-duration: 1ms;
+    }
+
+    .adminChatViewport li {
+      animation: none;
+    }
+
+    .adminChatSend,
+    .adminMessageReceipt {
+      transition-duration: 1ms;
     }
   }
 }

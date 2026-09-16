@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { redirect, usePathname } from "next/navigation";
 import {
   BarChart3,
@@ -16,8 +17,11 @@ import {
   Tags,
   Users,
   LogOut,
+  Menu,
+  X,
 } from "@/components/icons";
 import { isAdminRequestAuthorized, logoutAdmin } from "@/lib/admin-auth";
+import { isAdminRouteActive } from "@/lib/admin-navigation";
 import "./globals.css";
 
 const nav = [
@@ -43,9 +47,17 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/admin/login";
+  const activeSection = nav.find(({ href }) =>
+    isAdminRouteActive(pathname, href),
+  );
 
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerClosing, setDrawerClosing] = useState(false);
+  const drawerRef = useRef<HTMLDialogElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     localStorage.removeItem("mehtaxd_admin_tokens");
@@ -65,14 +77,102 @@ export default function AdminLayout({
     checkAuth();
   }, [isLoginPage]);
 
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 901px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches || !drawerRef.current?.open) return;
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      drawerRef.current.close();
+      setDrawerOpen(false);
+      setDrawerClosing(false);
+      document.documentElement.classList.remove("adminNavOpen");
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      document.documentElement.classList.remove("adminNavOpen");
+    };
+  }, []);
+
   const handleLogout = async () => {
     await logoutAdmin();
     redirect("/admin/login");
   };
 
+  const openDrawer = () => {
+    const drawer = drawerRef.current;
+    if (!drawer || drawer.open) return;
+    setDrawerClosing(false);
+    setDrawerOpen(true);
+    document.documentElement.classList.add("adminNavOpen");
+    drawer.showModal();
+  };
+
+  const closeDrawer = (restoreFocus = true) => {
+    const drawer = drawerRef.current;
+    if (!drawer?.open || drawerClosing) return;
+    setDrawerClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      drawer.close();
+      setDrawerOpen(false);
+      setDrawerClosing(false);
+      document.documentElement.classList.remove("adminNavOpen");
+      if (restoreFocus) menuButtonRef.current?.focus();
+    }, 160);
+  };
+
+  const renderNavigation = (mobile = false) => (
+    <>
+      <Link
+        href="/admin"
+        className="adminBrand"
+        onClick={mobile ? () => closeDrawer(false) : undefined}
+      >
+        <img src="/mehtaxd-ninja.jpg" alt="" />
+        <span>
+          Mehta<span>XD</span>
+        </span>
+      </Link>
+      <div className="adminStoreLabel">
+        <span className="adminDot" /> Single-store admin
+      </div>
+      <nav className="adminNav" aria-label="Admin navigation">
+        {nav.map(({ href, label, icon: Icon }) => {
+          const active = isAdminRouteActive(pathname, href);
+          return (
+            <Link
+              href={href}
+              key={href}
+              className="adminNavLink"
+              aria-current={active ? "page" : undefined}
+              onClick={mobile ? () => closeDrawer(false) : undefined}
+            >
+              <Icon size={17} />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="adminSidebarBottom">
+        <a
+          href="http://localhost:3000"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <BookOpen size={16} /> View storefront
+        </a>
+        <button onClick={handleLogout} className="adminSignOut">
+          <LogOut size={16} /> Sign out
+        </button>
+        <span>MehtaXD Admin · 2026</span>
+      </div>
+    </>
+  );
+
   if (checking) {
     return (
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
         <head />
         <body>
           <div className="adminApp">
@@ -112,7 +212,7 @@ export default function AdminLayout({
 
   if (isLoginPage) {
     return (
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
         <head />
         <body>{children}</body>
       </html>
@@ -120,58 +220,30 @@ export default function AdminLayout({
   }
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head />
       <body>
         <div className="adminApp">
           <aside className="adminSidebar">
-            <a href="/admin" className="adminBrand">
-              <img src="/mehtaxd-ninja.jpg" alt="" />
-              <span>
-                Mehta<span>XD</span>
-              </span>
-            </a>
-            <div className="adminStoreLabel">
-              <span className="adminDot" /> Single-store admin
-            </div>
-            <nav className="adminNav" aria-label="Admin navigation">
-              {nav.map(({ href, label, icon: Icon }) => (
-                <a href={href} key={href} className="adminNavLink">
-                  <Icon size={17} />
-                  {label}
-                </a>
-              ))}
-            </nav>
-            <div className="adminSidebarBottom">
-              <a
-                href="http://localhost:3000"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <BookOpen size={16} /> View storefront
-              </a>
-              <button
-                onClick={handleLogout}
-                className="adminButton"
-                style={{
-                  width: "100%",
-                  justifyContent: "center",
-                  background: "transparent",
-                  border: "none",
-                  color: "#e6002d",
-                  cursor: "pointer",
-                }}
-              >
-                <LogOut size={16} /> Sign out
-              </button>
-              <span>MehtaXD Admin · 2026</span>
-            </div>
+            {renderNavigation()}
           </aside>
           <div className="adminMain">
             <header className="adminTopbar">
-              <div>
+              <button
+                ref={menuButtonRef}
+                type="button"
+                className="adminMenuButton"
+                aria-label="Open admin navigation"
+                aria-haspopup="dialog"
+                aria-expanded={drawerOpen}
+                aria-controls="admin-mobile-navigation"
+                onClick={openDrawer}
+              >
+                <Menu size={21} />
+              </button>
+              <div className="adminTopIdentity">
                 <span className="adminTopEyebrow">CONTROL CENTER</span>
-                <strong>MehtaXD</strong>
+                <strong>{activeSection?.label ?? "MehtaXD"}</strong>
               </div>
               <div className="adminTopActions">
                 <span className="adminStatus">
@@ -188,15 +260,44 @@ export default function AdminLayout({
             </header>
             <main className="adminContent">{children}</main>
           </div>
+          <dialog
+            ref={drawerRef}
+            id="admin-mobile-navigation"
+            className="adminMobileNav"
+            data-closing={drawerClosing ? "true" : "false"}
+            aria-label="Admin navigation"
+            onCancel={(event) => {
+              event.preventDefault();
+              closeDrawer();
+            }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) closeDrawer();
+            }}
+            onClose={() => {
+              setDrawerOpen(false);
+              setDrawerClosing(false);
+              document.documentElement.classList.remove("adminNavOpen");
+            }}
+          >
+            <aside className="adminMobileDrawer">
+              <button
+                type="button"
+                className="adminDrawerClose"
+                aria-label="Close admin navigation"
+                onClick={() => closeDrawer()}
+              >
+                <X size={21} />
+              </button>
+              {renderNavigation(true)}
+            </aside>
+          </dialog>
           <style jsx>{`
             @keyframes spin {
               to {
                 transform: rotate(360deg);
               }
             }
-            .adminNavLink {
-              text-decoration: none;
-            }
+            .adminNavLink { text-decoration: none; }
           `}</style>
         </div>
       </body>

@@ -88,7 +88,7 @@ export default function AdminCustomersPage() {
   }
 
   return (
-    <>
+    <div className="adminOperationalPage adminCustomersListPage">
       <div className="adminPageHead">
         <div>
           <div className="adminEyebrow">Customer directory</div>
@@ -107,7 +107,7 @@ export default function AdminCustomersPage() {
         </button>
       </div>
 
-      <div className="adminPanel adminCustomerFilters">
+      <div className="adminPanel adminCustomerFilters adminOperationalFilters">
         <form onSubmit={submitSearch} role="search">
           <label htmlFor="customer-search">Search name or email</label>
           <div>
@@ -159,7 +159,7 @@ export default function AdminCustomersPage() {
         </div>
       ) : (
         <div className="adminOrderTableShell">
-          <table className="adminOrderTable adminCustomerTable">
+          <table className="adminOrderTable adminCustomerTable adminOperationalTable adminCustomersListTable">
             <thead>
               <tr>
                 <th>Customer</th>
@@ -175,13 +175,13 @@ export default function AdminCustomersPage() {
             <tbody>
               {customers.map((customer) => (
                 <tr key={customer.id}>
-                  <td data-label="Customer">
+                  <td className="adminOperationalIdentity" data-label="Customer">
                     <strong>
                       {customer.displayName || "Unnamed customer"}
                     </strong>
                     <small>{customer.email || "No email"}</small>
                   </td>
-                  <td data-label="Providers">
+                  <td className="adminOperationalProviders" data-label="Providers">
                     <div className="adminCustomerBadges">
                       {customer.providers.length ? (
                         customer.providers.map((provider) => (
@@ -197,26 +197,27 @@ export default function AdminCustomersPage() {
                       )}
                     </div>
                   </td>
-                  <td data-label="Status">
+                  <td className="adminOperationalOrderStatus" data-label="Status">
                     <span className={`adminCustomerStatus ${customer.status}`}>
                       {label(customer.status)}
                     </span>
                   </td>
-                  <td data-label="Verified">
+                  <td className="adminOperationalVerified" data-label="Verified">
                     {customer.emailVerified ? "Verified" : "Not verified"}
                   </td>
-                  <td data-label="Orders">
+                  <td className="adminOperationalActivity" data-label="Orders">
                     <strong>{customer.orderCount}</strong>
                   </td>
-                  <td data-label="Last login">{date(customer.lastLoginAt)}</td>
-                  <td data-label="Created">{date(customer.createdAt)}</td>
-                  <td data-label="Actions">
+                  <td className="adminOperationalDate" data-label="Last login">{date(customer.lastLoginAt)}</td>
+                  <td className="adminOperationalCreated" data-label="Created">{date(customer.createdAt)}</td>
+                  <td className="adminOperationalAction" data-label="Actions">
                     <Link
                       className="adminIconButton"
                       href={`/admin/customers/${customer.id}` as Route}
                       aria-label={`Open customer ${customer.displayName || customer.email || customer.id}`}
                     >
                       <ArrowUpRight size={16} />
+                      <span className="adminMobileActionLabel">Open customer</span>
                     </Link>
                   </td>
                 </tr>
@@ -245,6 +246,6 @@ export default function AdminCustomersPage() {
           Next
         </button>
       </div>
-    </>
+    </div>
   );
 }

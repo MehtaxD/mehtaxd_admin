@@ -595,6 +595,7 @@ export interface OrderEvent {
 
 export interface ChatMessage {
   id: string;
+  clientMessageId: string | null;
   senderType: "customer" | "admin" | "system";
   senderLabel: string;
   messageType: "text" | "system";
@@ -602,6 +603,7 @@ export interface ChatMessage {
   receiptStatus: "sent" | "delivered" | "seen";
   receiptLabel: "Sent" | "Delivered" | "Seen";
   createdAt: string;
+  pending?: boolean;
 }
 
 export interface OrderChat {

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, RotateCcw } from "@/components/icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowIcon, ChevronDown, Loader2, RotateCcw } from "@/components/icons";
 import {
   type AdminOrder,
   type AdminPaymentAttempt,
@@ -15,6 +15,11 @@ import {
   type OrderEvent,
   type OrderStatus,
 } from "@/lib/nestjs-api";
+import {
+  applyReceipt,
+  mergeChatMessage,
+  useAdminOrderChatRealtime,
+} from "@/lib/order-chat-realtime";
 
 const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   awaiting_payment: ["cancelled", "expired"],
@@ -58,6 +63,18 @@ function date(value: string | null) {
   }).format(new Date(value));
 }
 
+function mediaUrl(value: string) {
+  try {
+    if (/^https?:\/\//i.test(value)) return value;
+    const configured = new URL(
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
+    );
+    return new URL(value, `${configured.origin}/`).toString();
+  } catch {
+    return value;
+  }
+}
+
 function badge(value: string) {
   return (
     <span className={`adminOrderBadge ${value.replaceAll("_", "-")}`}>
@@ -71,6 +88,10 @@ function eventText(event: OrderEvent) {
   if (event.newFulfillmentStatus)
     return `Fulfillment ${label(event.newFulfillmentStatus)}`;
   return label(event.eventType);
+}
+
+export function isNearChatBottom(element: HTMLElement, threshold = 72) {
+  return element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
 }
 
 export default function AdminOrderDetailPage() {
@@ -98,6 +119,11 @@ export default function AdminOrderDetailPage() {
     null,
   );
   const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [showNewest, setShowNewest] = useState(false);
+  const [connectionRestored, setConnectionRestored] = useState(false);
+  const chatViewportRef = useRef<HTMLOListElement>(null);
+  const followNewestRef = useRef(true);
+  const previousConnectionRef = useRef<"connecting" | "connected" | "reconnecting">("connecting");
 
   const legalOrderTransitions = useMemo(() => {
     if (!order) return [];
@@ -138,14 +164,19 @@ export default function AdminOrderDetailPage() {
     }
   }
 
-  async function loadCommunication() {
+  const loadCommunication = useCallback(async () => {
     setCommunicationLoading(true);
     try {
       const [chat, deliveryList] = await Promise.all([
         nestjsApi.orders.getChat(params.id),
         nestjsApi.orders.getDeliveries(params.id),
       ]);
-      setMessages(chat.messages.items);
+      setMessages((current) =>
+        chat.messages.items.reduce(
+          (items, message) => mergeChatMessage(items, message),
+          current,
+        ),
+      );
       setDeliveries(deliveryList.items);
     } catch (err) {
       setError(
@@ -156,6 +187,53 @@ export default function AdminOrderDetailPage() {
     } finally {
       setCommunicationLoading(false);
     }
+  }, [params.id]);
+
+  function scrollToNewest(behavior: ScrollBehavior = "smooth") {
+    const viewport = chatViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+    followNewestRef.current = true;
+    setShowNewest(false);
+  }
+
+  const connectionState = useAdminOrderChatRealtime({
+    orderId: params.id,
+    enabled: Boolean(order),
+    onMessage: (message) => {
+      const shouldFollow = followNewestRef.current;
+      setMessages((current) => mergeChatMessage(current, message));
+      if (shouldFollow) {
+        window.requestAnimationFrame(() => scrollToNewest("smooth"));
+      } else {
+        setShowNewest(true);
+      }
+    },
+    onReceipt: (update) =>
+      setMessages((current) => applyReceipt(current, update)),
+    onSync: () => void loadCommunication(),
+  });
+
+  useEffect(() => {
+    const previous = previousConnectionRef.current;
+    previousConnectionRef.current = connectionState;
+    if (connectionState !== "connected" || previous !== "reconnecting") return;
+    setConnectionRestored(true);
+    const timeout = window.setTimeout(() => setConnectionRestored(false), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [connectionState]);
+
+  useEffect(() => {
+    if (!followNewestRef.current) return;
+    window.requestAnimationFrame(() => scrollToNewest("auto"));
+  }, [messages.length]);
+
+  function handleChatScroll() {
+    const viewport = chatViewportRef.current;
+    if (!viewport) return;
+    const nearBottom = isNearChatBottom(viewport);
+    followNewestRef.current = nearBottom;
+    if (nearBottom) setShowNewest(false);
   }
 
   async function loadPayments() {
@@ -269,16 +347,38 @@ export default function AdminOrderDetailPage() {
   async function sendAdminMessage() {
     const body = chatBody.trim();
     if (!body) return;
+    const clientMessageId = `admin-web-${Date.now()}-${crypto.randomUUID()}`;
+    const optimisticId = `optimistic:${clientMessageId}`;
+    setMessages((current) => [
+      ...current,
+      {
+        id: optimisticId,
+        clientMessageId,
+        senderType: "admin",
+        senderLabel: "MehtaXD",
+        messageType: "text",
+        body,
+        receiptStatus: "sent",
+        receiptLabel: "Sent",
+        createdAt: new Date().toISOString(),
+        pending: true,
+      },
+    ]);
+    followNewestRef.current = true;
+    setChatBody("");
     setMutating("chat");
     setError("");
     try {
       const message = await nestjsApi.orders.sendMessage(order!.id, {
         body,
-        clientMessageId: `admin-web-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        clientMessageId,
       });
-      setMessages((current) => [...current, message]);
-      setChatBody("");
+      setMessages((current) => mergeChatMessage(current, message));
     } catch (err) {
+      setMessages((current) =>
+        current.filter((message) => message.id !== optimisticId),
+      );
+      setChatBody(body);
       setError(
         err instanceof Error ? err.message : "Message could not be sent.",
       );
@@ -346,6 +446,7 @@ export default function AdminOrderDetailPage() {
   const reconciliationPayments = payments.filter(
     (payment) => payment.reconciliationRequired,
   );
+  const latestPayment = payments[0] ?? null;
 
   return (
     <>
@@ -392,32 +493,133 @@ export default function AdminOrderDetailPage() {
         </div>
       ) : null}
 
-      <div className="adminOrderDetailGrid">
-        <section className="adminPanel adminOrderDetailMain">
-          <div className="adminPanelHead">
-            <h2>Order</h2>
-            <span>Expected version {order.version}</span>
-          </div>
-          <div className="adminOrderMetrics">
+      <section className="adminOrderChatWorkspace" aria-labelledby="admin-order-chat-heading">
+        <div className="adminOrderChatPanel">
+          <div className="adminOrderChatHead">
             <div>
-              <small>Total</small>
-              <strong>{money(order.totalMinor, order.currency)}</strong>
-              <span>{order.currency}</span>
+              <h2 id="admin-order-chat-heading">Customer conversation</h2>
+              <p>Private support for {order.orderNumber}</p>
             </div>
-            <div>
-              <small>Order status</small>
-              {badge(order.orderStatus)}
-            </div>
-            <div>
-              <small>Fulfillment</small>
-              {badge(order.fulfillmentStatus)}
-            </div>
-            <div>
-              <small>Created</small>
-              <strong>{date(order.createdAt)}</strong>
+            <div className="adminChatHeadActions">
+              {connectionState === "reconnecting" ? (
+                <span className="adminChatConnection reconnecting" role="status">Reconnecting…</span>
+              ) : connectionRestored ? (
+                <span className="adminChatConnection restored" role="status">Connection restored</span>
+              ) : null}
+              <button
+                className="adminButton adminChatRefresh"
+                onClick={loadCommunication}
+                disabled={communicationLoading || Boolean(mutating)}
+              >
+                <RotateCcw size={14} />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 
+          <div className="adminSensitiveNotice adminChatSafety">
+            Never request passwords, 2FA codes, card details, or account credentials.
+          </div>
+
+          <div className="adminChatViewportShell">
+            {communicationLoading && messages.length === 0 ? (
+              <div className="adminChatLoading" role="status"><Loader2 className="adminSpinner" size={18} /> Loading conversation…</div>
+            ) : null}
+            <ol
+              className="adminChatMessages adminChatViewport"
+              ref={chatViewportRef}
+              onScroll={handleChatScroll}
+            >
+              {messages.length === 0 && !communicationLoading ? (
+                <li className="empty">No messages yet. Start with a clear order update.</li>
+              ) : (
+                messages.map((message) => (
+                  <li
+                    className={message.senderType === "admin" ? "staff" : "customer"}
+                    key={message.id}
+                  >
+                    <div className="adminMessageMeta">
+                      <strong>{message.senderType === "admin" ? "MehtaXD" : message.senderLabel}</strong>
+                      <time>{date(message.createdAt)}</time>
+                    </div>
+                    <p>{message.body}</p>
+                    {message.senderType === "admin" ? (
+                      <span
+                        className={`adminMessageReceipt ${message.receiptStatus}`}
+                        aria-label={message.receiptLabel}
+                        title={message.receiptLabel}
+                      >
+                        <span className="adminReceiptTicks" aria-hidden="true">
+                          {message.pending ? "…" : message.receiptStatus === "sent" ? "✓" : "✓✓"}
+                        </span>
+                        <span>{message.pending ? "Sending" : message.receiptLabel}</span>
+                      </span>
+                    ) : null}
+                  </li>
+                ))
+              )}
+            </ol>
+            {showNewest ? (
+              <button className="adminChatJump" type="button" onClick={() => scrollToNewest()}>
+                <ChevronDown size={15} /> Jump to newest
+              </button>
+            ) : null}
+          </div>
+
+          <div className="adminChatComposer">
+            <label className="srOnly" htmlFor="admin-chat-body">Reply to customer</label>
+            <textarea
+              id="admin-chat-body"
+              value={chatBody}
+              rows={1}
+              maxLength={4000}
+              onChange={(event) => setChatBody(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  if (chatBody.trim() && !mutating) void sendAdminMessage();
+                }
+              }}
+              placeholder="Write an order update…"
+            />
+            <button
+              className="adminButton primary adminChatSend"
+              onClick={sendAdminMessage}
+              disabled={!chatBody.trim() || Boolean(mutating)}
+            >
+              <span>{mutating === "chat" ? "Sending…" : "Send"}</span>
+              <ArrowIcon size={16} />
+            </button>
+          </div>
+        </div>
+
+        <aside className="adminOrderSupportContext" aria-label="Order support context">
+          <div className="adminSupportCustomer">
+            <span>Customer</span>
+            <strong>{order.customerName || "Name not provided"}</strong>
+            <a href={`mailto:${order.customerEmail}`}>{order.customerEmail}</a>
+          </div>
+          <dl>
+            <div><dt>Order</dt><dd>{order.orderNumber}</dd></div>
+            <div><dt>Total</dt><dd>{money(order.totalMinor, order.currency)} {order.currency}</dd></div>
+            <div><dt>Order status</dt><dd>{badge(order.orderStatus)}</dd></div>
+            <div><dt>Payment</dt><dd>{latestPayment ? badge(latestPayment.status) : "No attempt"}</dd></div>
+            <div><dt>Fulfillment</dt><dd>{badge(order.fulfillmentStatus)}</dd></div>
+            <div><dt>Created</dt><dd>{date(order.createdAt)}</dd></div>
+            <div><dt>Paid</dt><dd>{date(order.paidAt)}</dd></div>
+          </dl>
+          {order.customerId ? (
+            <Link className="adminTextLink" href={`/admin/customers/${order.customerId}`}>Open customer record →</Link>
+          ) : null}
+        </aside>
+      </section>
+
+      <div className="adminOrderDetailGrid">
+        <section className="adminPanel adminOrderDetailMain">
+          <div className="adminPanelHead">
+            <h2>Operational controls</h2>
+            <span>Expected version {order.version}</span>
+          </div>
           <div className="adminOrderTransitionPanel">
             <div>
               <h3>Order status</h3>
@@ -522,77 +724,6 @@ export default function AdminOrderDetailPage() {
                 )}
               </ol>
             ) : null}
-          </div>
-
-          <div className="adminOrderCommunication">
-            <div className="adminPanelHead">
-              <h2>Customer conversation</h2>
-              <button
-                className="adminButton"
-                onClick={loadCommunication}
-                disabled={communicationLoading || Boolean(mutating)}
-              >
-                Refresh chat
-              </button>
-            </div>
-            <div className="adminSensitiveNotice">
-              Never ask for passwords, 2FA codes, card details, or account
-              credentials in normal chat.
-            </div>
-            {communicationLoading ? (
-              <p className="adminMuted">Loading conversation…</p>
-            ) : null}
-            <ol className="adminChatMessages">
-              {messages.length === 0 ? (
-                <li className="empty">No messages yet.</li>
-              ) : (
-                messages.map((message) => (
-                  <li
-                    className={
-                      message.senderType === "admin" ? "staff" : "customer"
-                    }
-                    key={message.id}
-                  >
-                    <div>
-                      <strong>
-                        {message.senderType === "admin"
-                          ? "MehtaXD"
-                          : message.senderLabel}
-                      </strong>
-                      <time>{date(message.createdAt)}</time>
-                    </div>
-                    <p>{message.body}</p>
-                    {message.senderType === "admin" ? (
-                      <span
-                        className={`adminMessageReceipt ${message.receiptStatus}`}
-                        aria-label={message.receiptLabel}
-                        title={message.receiptLabel}
-                      >
-                        {message.receiptStatus === "sent" ? "✓" : "✓✓"}{" "}
-                        <span>{message.receiptLabel}</span>
-                      </span>
-                    ) : null}
-                  </li>
-                ))
-              )}
-            </ol>
-            <div className="adminChatComposer">
-              <label htmlFor="admin-chat-body">Reply to customer</label>
-              <textarea
-                id="admin-chat-body"
-                value={chatBody}
-                maxLength={4000}
-                onChange={(event) => setChatBody(event.target.value)}
-                placeholder="Write a concise order update…"
-              />
-              <button
-                className="adminButton primary"
-                onClick={sendAdminMessage}
-                disabled={!chatBody.trim() || Boolean(mutating)}
-              >
-                {mutating === "chat" ? "Sending…" : "Send reply"}
-              </button>
-            </div>
           </div>
 
           <div className="adminOrderCommunication">
@@ -776,11 +907,16 @@ export default function AdminOrderDetailPage() {
             {order.items.map((item) => (
               <article key={item.id}>
                 <div className="adminOrderItemImage">
+                  <span>{item.productName.slice(0, 2).toUpperCase()}</span>
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt="" />
-                  ) : (
-                    <span>{item.productName.slice(0, 2).toUpperCase()}</span>
-                  )}
+                    <img
+                      src={mediaUrl(item.imageUrl)}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.hidden = true;
+                      }}
+                    />
+                  ) : null}
                 </div>
                 <div>
                   <span>
@@ -813,42 +949,6 @@ export default function AdminOrderDetailPage() {
         </section>
 
         <aside className="adminOrderSide">
-          <section className="adminPanel">
-            <div className="adminPanelHead">
-              <h2>Customer</h2>
-            </div>
-            <dl className="adminOrderFacts">
-              <div>
-                <dt>Email snapshot</dt>
-                <dd>{order.customerEmail}</dd>
-              </div>
-              <div>
-                <dt>Name snapshot</dt>
-                <dd>{order.customerName || "Not provided"}</dd>
-              </div>
-              <div>
-                <dt>Customer ID</dt>
-                <dd>{order.customerId}</dd>
-              </div>
-              <div>
-                <dt>Account status</dt>
-                <dd>
-                  {order.customerStatus
-                    ? label(order.customerStatus)
-                    : "Historical/guest snapshot"}
-                </dd>
-              </div>
-            </dl>
-            {order.customerId ? (
-              <Link
-                className="adminTextLink"
-                href={`/admin/customers/${order.customerId}`}
-              >
-                Open customer record →
-              </Link>
-            ) : null}
-          </section>
-
           <section className="adminPanel">
             <div className="adminPanelHead">
               <h2>Totals</h2>

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins:
+    process.env.NODE_ENV === "development" ? ["192.168.1.69"] : undefined,
   poweredByHeader: false,
   reactStrictMode: true,
   typedRoutes: true,

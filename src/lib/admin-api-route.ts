@@ -23,7 +23,11 @@ const refreshes = new Map<string, Promise<TokenPayload | null>>();
 
 export function validateAdminOrigin(request: Request): NextResponse | null {
   const expected = new URL(process.env.ADMIN_URL || "http://localhost:3001").origin;
-  return request.headers.get("origin") === expected
+  const allowed = new Set([expected]);
+  if (process.env.NODE_ENV === "development") {
+    allowed.add("http://192.168.1.69:3001");
+  }
+  return allowed.has(request.headers.get("origin") || "")
     ? null
     : NextResponse.json({ message: "Invalid request origin." }, { status: 403 });
 }
