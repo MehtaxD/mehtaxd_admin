@@ -10,6 +10,8 @@ export default function AdminCategoriesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [gamesError, setGamesError] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedGameId, setSelectedGameId] = useState<string>("");
 
@@ -19,24 +21,29 @@ export default function AdminCategoriesPage() {
   }, [selectedGameId]);
 
   async function loadGames() {
+    setGamesError(false);
     try {
       const response = await nestjsApi.games.list({ limit: 100, status: "published" });
       setGames(response);
-    } catch (err) {
-      console.error("Failed to load games:", err);
+    } catch {
+      setGames([]);
+      setGamesError(true);
     }
   }
 
   async function loadCategories() {
     try {
       setLoading(true);
+      setError("");
       const response = await nestjsApi.categories.list({
         limit: 100,
         gameId: selectedGameId || undefined,
       });
       setCategories(response);
+      setLoadFailed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load categories");
+      setError(err instanceof Error ? err.message : "Categories couldn’t load. Check the connection and try again.");
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -45,11 +52,12 @@ export default function AdminCategoriesPage() {
   async function handleDelete(id: string) {
     if (!confirm("Delete this category? This cannot be undone.")) return;
     setDeletingId(id);
+    setError("");
     try {
       await nestjsApi.categories.delete(id);
       setCategories(categories.filter((c) => c.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete category");
+      setError(err instanceof Error ? err.message : "The category couldn’t be deleted. Refresh and try again.");
     } finally {
       setDeletingId(null);
     }
@@ -101,11 +109,13 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
 
-      {error && <div className="adminNotice" style={{ marginBottom: 18 }}>{error}</div>}
+      {gamesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Game filters couldn’t load. Categories are still shown without that filter.</span><button type="button" className="adminButton" onClick={() => void loadGames()}>Try again</button></div> : null}
+
+      {error && <div className="adminNotice adminInlineFeedback" role="alert"><span>{error}</span>{loadFailed ? <button type="button" className="adminButton" onClick={() => void loadCategories()}>Try again</button> : null}</div>}
 
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: "#777" }}>Loading categories…</div>
-      ) : categories.length === 0 ? (
+      ) : loadFailed ? null : categories.length === 0 ? (
         <div className="adminPanel" style={{ textAlign: "center", padding: 60 }}>
           <p style={{ color: "#777", marginBottom: 16 }}>
             {selectedGameId ? "No categories for this game yet." : "No categories yet."}

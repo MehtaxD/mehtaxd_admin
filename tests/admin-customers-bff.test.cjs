@@ -26,8 +26,10 @@ function harness({ token = 'test-admin-token', upstreamStatus = 200 } = {}) {
     }, { filename });
     return exports;
   }
+  const safeErrors = load('src/lib/safe-api-error.ts');
   const helper = load('src/lib/admin-api-route.ts', {
     'next/headers': { cookies: async () => ({ get: (name) => name === 'mxd_admin_access' && token ? { value: token } : undefined }) },
+    '@/lib/safe-api-error': safeErrors,
   }, async (url, init) => {
     calls.push({ url, ...init });
     return Response.json(upstreamStatus === 200 ? { ok: true } : { message: 'Admin access required' }, { status: upstreamStatus });
@@ -41,7 +43,7 @@ function harness({ token = 'test-admin-token', upstreamStatus = 200 } = {}) {
     const segments = endpoint.split('?')[0].slice(1).split('/');
     return (route[method] ?? route.GET)(request, { params: Promise.resolve({ path: segments }) });
   }
-  const client = load('src/lib/nestjs-api.ts', {}, (url, init) => send(init.method ?? 'GET', url.replace('/api/admin/backend', ''), init)).nestjsApi;
+  const client = load('src/lib/nestjs-api.ts', { '@/lib/safe-api-error': safeErrors }, (url, init) => send(init.method ?? 'GET', url.replace('/api/admin/backend', ''), init)).nestjsApi;
   return { calls, route, send, client };
 }
 

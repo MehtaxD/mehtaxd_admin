@@ -10,15 +10,17 @@ export default function AdminDashboard() {
     revenue: 0,
     orders: 0,
     activeChats: 0,
-    products: 0,
+    products: null as number | null,
   });
   const [loading, setLoading] = useState(true);
+  const [statsError, setStatsError] = useState(false);
 
   useEffect(() => {
     loadStats();
   }, []);
 
   async function loadStats() {
+    setStatsError(false);
     try {
       const [productsRes] = await Promise.all([
         nestjsApi.products.list({ limit: 1 }),
@@ -27,8 +29,9 @@ export default function AdminDashboard() {
         ...prev,
         products: productsRes.length,
       }));
-    } catch (err) {
-      console.error("Failed to load stats:", err);
+    } catch {
+      setStats((current) => ({ ...current, products: null }));
+      setStatsError(true);
     } finally {
       setLoading(false);
     }
@@ -46,6 +49,13 @@ export default function AdminDashboard() {
           <Plus size={16} /> Add game
         </Link>
       </div>
+
+      {statsError ? (
+        <div className="adminNotice adminInlineFeedback" role="alert">
+          <span>Product totals couldn’t load. The catalog was not reported as zero.</span>
+          <button type="button" className="adminButton" onClick={() => void loadStats()}>Try again</button>
+        </div>
+      ) : null}
 
       <div className="adminGrid">
         <div className="adminStat">
@@ -65,7 +75,7 @@ export default function AdminDashboard() {
         </div>
         <div className="adminStat">
           <small>Products</small>
-          <strong>{loading ? "—" : stats.products}</strong>
+          <strong>{loading ? "—" : stats.products ?? "Unavailable"}</strong>
           <span>Current catalog from NestJS</span>
         </div>
       </div>

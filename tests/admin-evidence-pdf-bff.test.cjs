@@ -51,6 +51,7 @@ function harness({ token = "test-admin-token", status = 200 } = {}) {
     return exports;
   }
 
+  const safeErrors = load("src/lib/safe-api-error.ts");
   const helper = load(
     "src/lib/admin-api-route.ts",
     {
@@ -60,6 +61,7 @@ function harness({ token = "test-admin-token", status = 200 } = {}) {
             name === "mxd_admin_access" && token ? { value: token } : undefined,
         }),
       },
+      "@/lib/safe-api-error": safeErrors,
     },
     async (url, init) => {
       calls.push({ url, ...init });
@@ -100,7 +102,7 @@ function harness({ token = "test-admin-token", status = 200 } = {}) {
     });
   }
 
-  const client = load("src/lib/nestjs-api.ts", {}, (url, init) =>
+  const client = load("src/lib/nestjs-api.ts", { "@/lib/safe-api-error": safeErrors }, (url, init) =>
     send(init.method ?? "GET", url.replace("/api/admin/backend", "")),
   ).nestjsApi;
   return { calls, client, route, send };

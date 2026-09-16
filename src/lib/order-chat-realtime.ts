@@ -14,7 +14,9 @@ export type ReceiptUpdate = {
 export type AdminChatConnectionState =
   | "connecting"
   | "connected"
-  | "reconnecting";
+  | "reconnecting"
+  | "unauthorized"
+  | "unavailable";
 
 export function mergeChatMessage(
   messages: ChatMessage[],
@@ -96,8 +98,9 @@ export function useAdminOrderChatRealtime({
     let connectedOnce = false;
     let socket: Socket | null = null;
     let retry: ReturnType<typeof setTimeout> | null = null;
+    let terminal = false;
     const schedule = (delay: number) => {
-      if (disposed || retry) return;
+      if (disposed || terminal || retry) return;
       retry = setTimeout(() => {
         retry = null;
         void connect();
@@ -117,6 +120,7 @@ export function useAdminOrderChatRealtime({
         });
         if (!response.ok) {
           if (response.status >= 500) schedule(2000);
+          else setConnectionState(response.status === 401 || response.status === 403 ? "unauthorized" : "unavailable");
           return;
         }
         const payload: unknown = await response.json().catch(() => null);
@@ -126,8 +130,10 @@ export function useAdminOrderChatRealtime({
           !("ticket" in payload) ||
           typeof payload.ticket !== "string" ||
           disposed
-        )
+        ) {
+          if (!disposed) setConnectionState("unavailable");
           return;
+        }
         socket = io(realtimeUrl(), {
           transports: ["websocket"],
           auth: { ticket: payload.ticket },
@@ -138,7 +144,12 @@ export function useAdminOrderChatRealtime({
           connectedOnce = true;
           setConnectionState("connected");
           socket?.emit("chat:join", reference, (result: { ok?: boolean }) => {
-            if (!result?.ok) return;
+            if (!result?.ok) {
+              terminal = true;
+              setConnectionState("unavailable");
+              socket?.disconnect();
+              return;
+            }
             if (isReconnect) callbacks.current.onSync();
           });
         });

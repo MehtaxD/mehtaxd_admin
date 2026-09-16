@@ -1,31 +1,32 @@
+import { safeAdminErrorFromPayload } from "@/lib/safe-api-error";
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body) headers.set("Content-Type", "application/json");
-  const response = await fetch(`/api/admin/backend${endpoint}`, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/admin/backend${endpoint}`, {
+      ...options,
+      headers,
+      credentials: "same-origin",
+    });
+  } catch {
+    throw new Error("The Admin service could not be reached. Check your connection and try again.");
+  }
 
   if (response.status === 401 && typeof window !== "undefined")
     window.location.href = "/admin/login";
 
   if (!response.ok) {
     const errorText = await response.text();
-    let errorData;
+    let errorData: unknown = null;
     try {
       errorData = JSON.parse(errorText);
-    } catch {
-      errorData = { message: errorText };
-    }
-    throw new Error(
-      errorData.message ||
-        errorData.error ||
-        `Request failed: ${response.status} - ${errorText}`,
-    );
+    } catch {}
+    throw new Error(safeAdminErrorFromPayload(response.status, errorData).message);
   }
 
   if (response.status === 204) {
@@ -36,26 +37,23 @@ async function request<T>(
 }
 
 async function download(endpoint: string, fallbackFilename: string) {
-  const response = await fetch(`/api/admin/backend${endpoint}`, {
-    credentials: "same-origin",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/admin/backend${endpoint}`, {
+      credentials: "same-origin",
+    });
+  } catch {
+    throw new Error("The evidence PDF could not be reached. Check your connection and try again.");
+  }
   if (response.status === 401 && typeof window !== "undefined")
     window.location.href = "/admin/login";
   if (!response.ok) {
     const body = await response.text();
-    let message = body;
+    let payload: unknown = null;
     try {
-      const parsed: unknown = JSON.parse(body);
-      if (typeof parsed === "object" && parsed !== null) {
-        const candidate =
-          (parsed as { message?: unknown; error?: unknown }).message ??
-          (parsed as { error?: unknown }).error;
-        if (typeof candidate === "string") message = candidate;
-      }
-    } catch {
-      // The upstream error was plain text; use it as-is.
-    }
-    throw new Error(message || `Download failed (${response.status}).`);
+      payload = JSON.parse(body);
+    } catch {}
+    throw new Error(safeAdminErrorFromPayload(response.status, payload, "The evidence PDF is not available for this delivery.").message);
   }
   if (!response.headers.get("content-type")?.includes("application/pdf")) {
     throw new Error("The evidence PDF response was invalid.");
@@ -70,20 +68,30 @@ async function download(endpoint: string, fallbackFilename: string) {
   return { blob: await response.blob(), filename };
 }
 
+async function adminLogin(email: string, password: string) {
+  let response: Response;
+  try {
+    response = await fetch("/api/admin/auth/login", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch {
+    throw new Error("Authentication is temporarily unavailable. Check your connection and try again.");
+  }
+  const payload: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 400 || response.status === 401)
+      throw new Error("Invalid email or password.");
+    throw new Error(safeAdminErrorFromPayload(response.status, payload, "Admin sign-in couldn’t be completed. Try again.").message);
+  }
+  return payload as { user: { id: string; email: string; role: string } };
+}
+
 export const nestjsApi = {
   auth: {
-    login: (email: string, password: string) =>
-      fetch("/api/admin/auth/login", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      }).then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok)
-          throw new Error(payload.message || "Invalid credentials");
-        return payload as { user: { id: string; email: string; role: string } };
-      }),
+    login: adminLogin,
     logout: () =>
       fetch("/api/admin/auth/logout", {
         method: "POST",

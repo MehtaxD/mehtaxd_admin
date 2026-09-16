@@ -123,7 +123,7 @@ export default function AdminOrderDetailPage() {
   const [connectionRestored, setConnectionRestored] = useState(false);
   const chatViewportRef = useRef<HTMLOListElement>(null);
   const followNewestRef = useRef(true);
-  const previousConnectionRef = useRef<"connecting" | "connected" | "reconnecting">("connecting");
+  const previousConnectionRef = useRef<"connecting" | "connected" | "reconnecting" | "unauthorized" | "unavailable">("connecting");
 
   const legalOrderTransitions = useMemo(() => {
     if (!order) return [];
@@ -501,8 +501,14 @@ export default function AdminOrderDetailPage() {
               <p>Private support for {order.orderNumber}</p>
             </div>
             <div className="adminChatHeadActions">
-              {connectionState === "reconnecting" ? (
+              {connectionState === "connecting" ? (
+                <span className="adminChatConnection" role="status">Connecting…</span>
+              ) : connectionState === "reconnecting" ? (
                 <span className="adminChatConnection reconnecting" role="status">Reconnecting…</span>
+              ) : connectionState === "unauthorized" ? (
+                <span className="adminChatConnection unavailable" role="alert">Chat authorization expired. Refresh this Order.</span>
+              ) : connectionState === "unavailable" ? (
+                <span className="adminChatConnection unavailable" role="alert">Order Chat is unavailable. Refresh this Order to retry.</span>
               ) : connectionRestored ? (
                 <span className="adminChatConnection restored" role="status">Connection restored</span>
               ) : null}

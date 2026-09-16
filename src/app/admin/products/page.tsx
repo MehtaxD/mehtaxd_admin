@@ -15,6 +15,9 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [gamesError, setGamesError] = useState(false);
+  const [categoriesError, setCategoriesError] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [filters, setFilters] = useState({
@@ -38,26 +41,31 @@ export default function AdminProductsPage() {
   }, [filters.gameId]);
 
   async function loadGames() {
+    setGamesError(false);
     try {
       const response = await nestjsApi.games.list({ limit: 100, status: "published" });
       setGames(response);
-    } catch (err) {
-      console.error("Failed to load games:", err);
+    } catch {
+      setGames([]);
+      setGamesError(true);
     }
   }
 
   async function loadCategories() {
+    setCategoriesError(false);
     try {
       const response = await nestjsApi.categories.list({ limit: 100, gameId: filters.gameId });
       setCategories(response);
-    } catch (err) {
-      console.error("Failed to load categories:", err);
+    } catch {
+      setCategories([]);
+      setCategoriesError(true);
     }
   }
 
   async function loadProducts() {
     try {
       setLoading(true);
+      setError("");
       const response = await nestjsApi.products.list({
         limit: 50,
         gameId: filters.gameId || undefined,
@@ -66,8 +74,10 @@ export default function AdminProductsPage() {
         search: filters.search || undefined,
       });
       setProducts(response);
+      setLoadFailed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load products");
+      setError(err instanceof Error ? err.message : "Products couldn’t load. Check the connection and try again.");
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -76,11 +86,12 @@ export default function AdminProductsPage() {
   async function handleDelete(id: string) {
     if (!confirm("Delete this product? This cannot be undone.")) return;
     setDeletingId(id);
+    setError("");
     try {
       await nestjsApi.products.delete(id);
       setProducts(products.filter((p) => p.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete product");
+      setError(err instanceof Error ? err.message : "The product couldn’t be deleted. Refresh and try again.");
     } finally {
       setDeletingId(null);
     }
@@ -159,11 +170,14 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {error && <div className="adminNotice" style={{ marginBottom: 18 }}>{error}</div>}
+      {gamesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Game filters couldn’t load. Products are still shown without that filter.</span><button type="button" className="adminButton" onClick={() => void loadGames()}>Try again</button></div> : null}
+      {categoriesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Category filters couldn’t load for this game.</span><button type="button" className="adminButton" onClick={() => void loadCategories()}>Try again</button></div> : null}
+
+      {error && <div className="adminNotice adminInlineFeedback" role="alert"><span>{error}</span>{loadFailed ? <button type="button" className="adminButton" onClick={() => void loadProducts()}>Try again</button> : null}</div>}
 
       {loading ? (
         <div style={{ padding: 40, textAlign: "center", color: "#777" }}>Loading products…</div>
-      ) : products.length === 0 ? (
+      ) : loadFailed ? null : products.length === 0 ? (
         <div className="adminPanel" style={{ textAlign: "center", padding: 60 }}>
           <p style={{ color: "#777", marginBottom: 16 }}>No products found.</p>
           <Link className="adminButton primary" href="/admin/products/new">

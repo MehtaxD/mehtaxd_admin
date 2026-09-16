@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { safeAdminApiError } from "@/lib/safe-api-error";
 
 const API_URL = process.env.NESTJS_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4000";
 const ACCESS_COOKIE = "mxd_admin_access";
@@ -100,6 +101,22 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
     if (rotated) { accessToken = rotated.accessToken; upstream = await send(); }
   }
   const body = binary ? await upstream.arrayBuffer() : await upstream.text();
+  if (!upstream.ok) {
+    const normalized = binary && upstream.status === 422
+      ? { code: "VALIDATION_FAILED" as const, message: "Evidence integrity verification failed. The download was blocked.", retryable: false }
+      : safeAdminApiError(
+      upstream.status,
+      binary && upstream.status === 404
+        ? "Delivery evidence was not found for this Order."
+        : upstream.status === 404
+        ? "The requested Admin record was not found. Refresh the page and try again."
+        : undefined,
+    );
+    const response = NextResponse.json(normalized, { status: upstream.status });
+    if (rotated) setAdminCookies(response, rotated);
+    if (upstream.status === 401) clearAdminCookies(response);
+    return response;
+  }
   const headers = new Headers({
     "Content-Type": upstream.headers.get("content-type") || "application/json",
   });

@@ -77,6 +77,8 @@ export default function ProductEditorPage() {
   const [loading, setLoading] = useState(isEditing);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [gamesError, setGamesError] = useState(false);
+  const [categoriesError, setCategoriesError] = useState(false);
 
   useEffect(() => {
     loadGames();
@@ -95,20 +97,24 @@ export default function ProductEditorPage() {
   }, [form.gameId]);
 
   async function loadGames() {
+    setGamesError(false);
     try {
       const response = await nestjsApi.games.list({ limit: 100, status: "published" });
       setGames(response);
-    } catch (err) {
-      console.error("Failed to load games:", err);
+    } catch {
+      setGames([]);
+      setGamesError(true);
     }
   }
 
   async function loadCategories() {
+    setCategoriesError(false);
     try {
       const response = await nestjsApi.categories.list({ limit: 100, gameId: form.gameId });
       setCategories(response);
-    } catch (err) {
-      console.error("Failed to load categories:", err);
+    } catch {
+      setCategories([]);
+      setCategoriesError(true);
     }
   }
 
@@ -213,7 +219,9 @@ export default function ProductEditorPage() {
         </div>
       </div>
 
-      {message && <div className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
+      {message && <div role={messageType === "error" ? "alert" : "status"} className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
+      {gamesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Games couldn’t load, so this product cannot be assigned safely.</span><button type="button" className="adminButton" onClick={() => void loadGames()}>Try again</button></div> : null}
+      {categoriesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Categories couldn’t load for the selected game.</span><button type="button" className="adminButton" onClick={() => void loadCategories()}>Try again</button></div> : null}
 
       <section className="adminSection">
         <h2>Basic information</h2>
@@ -224,7 +232,7 @@ export default function ProductEditorPage() {
               value={form.gameId}
               onChange={(e) => set("gameId", e.target.value)}
               required
-              disabled={isEditing}
+              disabled={isEditing || gamesError}
             >
               <option value="">Select a game</option>
               {games.map((game) => (
@@ -240,7 +248,7 @@ export default function ProductEditorPage() {
               value={form.categoryId}
               onChange={(e) => set("categoryId", e.target.value)}
               required
-              disabled={!form.gameId}
+              disabled={!form.gameId || categoriesError}
             >
               <option value="">Select a category</option>
               {categories.map((cat) => (

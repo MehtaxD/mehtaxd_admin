@@ -38,6 +38,9 @@ test("realtime presentation exposes recovery without changing protocol events", 
   assert.match(realtime, /socket\.on\("chat:message"/);
   assert.match(realtime, /socket\.on\("chat:receipt-update"/);
   assert.match(realtime, /return connectionState/);
+  assert.match(realtime, /"unauthorized"/);
+  assert.match(realtime, /"unavailable"/);
+  assert.match(page, /Order Chat is unavailable\. Refresh this Order to retry\./);
 });
 
 test("initial realtime join skips duplicate sync while reconnect still resynchronizes", () => {

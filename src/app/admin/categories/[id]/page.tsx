@@ -36,6 +36,7 @@ export default function CategoryEditorPage() {
   const [loading, setLoading] = useState(isEditing);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [gamesError, setGamesError] = useState(false);
 
   useEffect(() => {
     loadGames();
@@ -45,11 +46,13 @@ export default function CategoryEditorPage() {
   }, [categoryId]);
 
   async function loadGames() {
+    setGamesError(false);
     try {
       const response = await nestjsApi.games.list({ limit: 100, status: "published" });
       setGames(response);
-    } catch (err) {
-      console.error("Failed to load games:", err);
+    } catch {
+      setGames([]);
+      setGamesError(true);
     }
   }
 
@@ -137,7 +140,8 @@ export default function CategoryEditorPage() {
         </div>
       </div>
 
-      {message && <div className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
+      {message && <div role={messageType === "error" ? "alert" : "status"} className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
+      {gamesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Games couldn’t load, so this category cannot be assigned safely.</span><button type="button" className="adminButton" onClick={() => void loadGames()}>Try again</button></div> : null}
 
       <section className="adminSection">
         <h2>Category details</h2>
@@ -148,7 +152,7 @@ export default function CategoryEditorPage() {
               value={form.gameId}
               onChange={(e) => set("gameId", e.target.value)}
               required
-              disabled={isEditing}
+              disabled={isEditing || gamesError}
             >
               <option value="">Select a game</option>
               {games.map((game) => (

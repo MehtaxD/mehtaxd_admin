@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
               placeholder="••••••••"
             />
           </label>
-          {error && <div className="adminNotice">{error}</div>}
+          {error && <div className="adminNotice" role="alert">{error}</div>}
           <button className="adminButton primary" disabled={loading} type="submit">
             {loading ? "Signing in…" : "Sign in"}
           </button>
