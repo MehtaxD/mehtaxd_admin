@@ -9,6 +9,72 @@
   padding-block: clamp(48px, 8vw, 96px);
 }
 
+@layer components {
+  .paymentEligibilityPage { display: grid; gap: 18px; }
+  .adminPaymentStatus { padding: 48px 0; color: var(--muted); }
+  .adminSuccessNotice { border-left: 3px solid var(--green); background: color-mix(in srgb, var(--green) 8%, var(--surface)); padding: 12px 14px; color: var(--ink); font-size: 13px; }
+  .paymentDefaultPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 430px); gap: 24px; align-items: end; padding: 22px; border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--line)); border-left: 4px solid var(--brand); border-radius: var(--radius-sm); background: var(--surface); }
+  .paymentDefaultPanel h2, .paymentSectionHead h2, .paymentEditor h2 { margin: 3px 0 5px; color: var(--ink); font-family: var(--font-display); letter-spacing: -.03em; }
+  .paymentDefaultPanel p, .paymentSectionHead p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .paymentDefaultAction { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px 10px; align-items: center; }
+  .paymentDefaultAction label { grid-column: 1 / -1; color: var(--muted); font-size: 11px; font-weight: 750; }
+  .paymentDefaultAction .adminSelect { min-height: 42px; }
+  .paymentProfileSection, .paymentEditor, .paymentAssignments { padding: 20px; overflow: visible; background: var(--surface); color: var(--ink); }
+  .paymentSectionHead { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+  .paymentProfileTableWrap { overflow-x: auto; }
+  .paymentProfileTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .paymentProfileTable th { color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; text-align: left; }
+  .paymentProfileTable th, .paymentProfileTable td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .paymentProfileTable td:first-child strong, .paymentProfileTable td:first-child small { display: block; }
+  .paymentProfileTable td:first-child small { color: var(--brand); margin-top: 3px; font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .05em; }
+  .paymentMethodTags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .paymentMethodTags span { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 4px 7px; color: var(--ink); font-size: 10px; font-weight: 700; }
+  .paymentRowActions, .paymentFormActions { display: flex; gap: 7px; align-items: center; justify-content: flex-end; }
+  .paymentEditor { scroll-margin-top: 24px; }
+  .paymentEditor form { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(300px, 2fr) auto; gap: 16px; align-items: end; margin-top: 16px; }
+  .paymentEditor fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .paymentEditor legend { margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 750; }
+  .paymentMethodChecks { display: flex; flex-wrap: wrap; gap: 7px; }
+  .paymentMethodChecks label, .paymentEnabledCheck { display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; font-size: 12px; font-weight: 700; }
+  .paymentMethodChecks input, .paymentEnabledCheck input, .paymentTargetList input { accent-color: var(--brand); }
+  .paymentEnabledCheck { align-self: end; }
+  .paymentAssignmentControls { display: grid; grid-template-columns: minmax(220px, 330px) 1fr; gap: 16px; align-items: end; }
+  .paymentAssignmentControls > label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 750; }
+  .paymentScopeTabs { display: inline-flex; justify-self: start; border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+  .paymentScopeTabs button { min-height: 36px; border: 0; border-radius: 6px; padding: 0 13px; background: transparent; color: var(--muted); cursor: pointer; font: inherit; font-size: 12px; font-weight: 750; transition: background-color 180ms ease, color 180ms ease; }
+  .paymentScopeTabs button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+  .paymentSearch { display: flex; align-items: center; gap: 8px; max-width: 520px; min-height: 42px; margin-top: 14px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; }
+  .paymentSearch input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; }
+  .paymentAssignmentSummary { margin: 14px 0 9px; color: var(--muted); font-size: 12px; }
+  .paymentTargetList { display: grid; max-height: 390px; overflow-y: auto; border-block: 1px solid var(--line); }
+  .paymentTargetList > label { display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(150px, auto); gap: 10px; align-items: center; min-height: 56px; padding: 9px 7px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background-color 180ms ease; }
+  .paymentTargetList > label:hover, .paymentTargetList > label.selected { background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
+  .paymentTargetList strong, .paymentTargetList small { display: block; overflow-wrap: anywhere; }
+  .paymentTargetList small { color: var(--muted); margin-top: 2px; }
+  .paymentTargetList em { color: var(--muted); font-size: 11px; font-style: normal; text-align: right; }
+  .paymentTargetList em.replace { color: #a84b00; font-weight: 750; }
+  .paymentEmpty { margin: 0; padding: 24px; color: var(--muted); text-align: center; }
+  .adminIconButton:disabled { opacity: .4; cursor: not-allowed; }
+
+  @media (max-width: 760px) {
+    .paymentDefaultPanel { grid-template-columns: 1fr; }
+    .paymentDefaultAction { grid-template-columns: 1fr; }
+    .paymentDefaultAction label { grid-column: auto; }
+    .paymentSectionHead { align-items: flex-start; flex-direction: column; }
+    .paymentEditor form { grid-template-columns: 1fr; align-items: stretch; }
+    .paymentFormActions { justify-content: flex-start; }
+    .paymentAssignmentControls { grid-template-columns: 1fr; }
+    .paymentScopeTabs { width: 100%; }
+    .paymentScopeTabs button { flex: 1; }
+    .paymentTargetList > label { grid-template-columns: 22px minmax(0, 1fr); }
+    .paymentTargetList em { grid-column: 2; text-align: left; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .paymentScopeTabs button, .paymentTargetList > label { transition-duration: 1ms; }
+  }
+}
+
 .adminErrorState > span {
   color: #e6002d;
   font-size: 10px;

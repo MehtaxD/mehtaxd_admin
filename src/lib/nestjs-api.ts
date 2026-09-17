@@ -211,6 +211,51 @@ export const nestjsApi = {
       }),
   },
 
+  paymentProfiles: {
+    configuration: () =>
+      request<PaymentEligibilityConfiguration>(
+        "/admin/payment-profiles/configuration",
+      ),
+    products: (params?: { q?: string; page?: number; limit?: number }) => {
+      const query = new URLSearchParams();
+      if (params?.q) query.set("q", params.q);
+      if (params?.page) query.set("page", String(params.page));
+      if (params?.limit) query.set("limit", String(params.limit));
+      return request<{ items: PaymentAssignmentTarget[]; page: number; limit: number; hasMore: boolean; query: string }>(`/admin/payment-profiles/products${query.size ? `?${query}` : ""}`);
+    },
+    create: (data: PaymentProfileInput) =>
+      request<PaymentProfile>("/admin/payment-profiles", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Partial<PaymentProfileInput>) =>
+      request<PaymentProfile>(`/admin/payment-profiles/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    remove: (id: string) =>
+      request<{ success: true; id: string }>(`/admin/payment-profiles/${id}`, {
+        method: "DELETE",
+      }),
+    setStoreDefault: (profileId: string) =>
+      request<{ defaultProfileId: string }>(
+        "/admin/payment-profiles/store-default",
+        { method: "PATCH", body: JSON.stringify({ profileId }) },
+      ),
+    updateAssignments: (
+      id: string,
+      data: {
+        scope: "game" | "category" | "product";
+        action: "assign" | "clear";
+        targetIds: string[];
+      },
+    ) =>
+      request<{ updated: number }>(
+        `/admin/payment-profiles/${id}/assignments`,
+        { method: "PATCH", body: JSON.stringify(data) },
+      ),
+  },
+
   blogs: {
     list: () => request<Blog[]>("/admin/blogs"),
     get: (id: string) => request<Blog>(`/admin/blogs/${id}`),
@@ -390,6 +435,39 @@ export const nestjsApi = {
       ),
   },
 };
+
+export type ExternalPaymentLayer = "card" | "crypto" | "other";
+
+export interface PaymentProfileInput {
+  name: string;
+  allowedExternalLayers: ExternalPaymentLayer[];
+  walletAllowed: boolean;
+  enabled: boolean;
+}
+
+export interface PaymentProfile extends PaymentProfileInput {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  isStoreDefault: boolean;
+  assignments: { games: number; categories: number; products: number };
+}
+
+export interface PaymentAssignmentTarget {
+  id: string;
+  name: string;
+  slug: string;
+  gameId?: string;
+  categoryId?: string;
+  paymentProfileId: string | null;
+}
+
+export interface PaymentEligibilityConfiguration {
+  defaultProfileId: string;
+  profiles: PaymentProfile[];
+  games: PaymentAssignmentTarget[];
+  categories: PaymentAssignmentTarget[];
+}
 
 export interface AdminWalletTransaction {
   id: string;

@@ -29,6 +29,7 @@ const nav = [
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
   { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/payment-eligibility", label: "Payment Eligibility", icon: Settings },
   { href: "/admin/blogs", label: "Blog", icon: BookOpen },
   { href: "/admin/legal-pages", label: "Legal Pages", icon: FileText },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },

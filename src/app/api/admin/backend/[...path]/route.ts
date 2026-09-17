@@ -8,6 +8,8 @@ const legalPage =
   "(privacy-policy|terms-and-conditions|refund-policy|cookie-policy)";
 const allowed: Record<string, RegExp[]> = {
   GET: [
+    /^admin\/payment-profiles(\/configuration|\/products)?(\?.*)?$/,
+    new RegExp(`^admin/payment-profiles/${uuid}$`),
     /^admin\/(games|categories|products|blogs|legal-pages|orders|order-chats|customers)(\?.*)?$/,
     new RegExp(`^admin/legal-pages/${legalPage}(\\?.*)?$`),
     new RegExp(
@@ -24,6 +26,7 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^admin/payments/${uuid}/events(\\?.*)?$`),
   ],
   POST: [
+    /^admin\/payment-profiles$/,
     /^games$/,
     new RegExp(`^games/${uuid}/(categories|products)$`),
     /^admin\/blogs$/,
@@ -33,6 +36,8 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^admin/orders/${uuid}/(chat/messages|deliveries)$`),
   ],
   PATCH: [
+    /^admin\/payment-profiles\/store-default$/,
+    new RegExp(`^admin/payment-profiles/${uuid}(/assignments)?$`),
     new RegExp(`^(games|categories|products)/${uuid}$`),
     new RegExp(`^admin/blogs/${uuid}(/archive)?$`),
     new RegExp(`^admin/legal-pages/${legalPage}$`),
@@ -40,6 +45,7 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^admin/orders/${uuid}/(status|fulfillment-status)$`),
   ],
   DELETE: [
+    new RegExp(`^admin/payment-profiles/${uuid}$`),
     new RegExp(`^(games|categories|products)/${uuid}$`),
     new RegExp(`^admin/blogs/${uuid}$`),
   ],
