@@ -35,6 +35,8 @@ test("Admin shell uses Next links and exposes the active route accessibly", () =
   assert.match(layout, /import Link from "next\/link"/);
   assert.match(layout, /aria-current=\{active \? "page" : undefined\}/);
   assert.doesNotMatch(layout, /<a href=\{href\}/);
+  assert.match(layout, /process\.env\.NEXT_PUBLIC_STOREFRONT_URL/);
+  assert.doesNotMatch(layout, /href="http:\/\/localhost:3000"/);
 });
 
 test("mobile navigation supports menu, Escape, backdrop, and navigation close", () => {

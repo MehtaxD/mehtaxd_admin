@@ -14,12 +14,12 @@ import {
   type PaymentSource,
 } from "@/lib/nestjs-api";
 
-const ORDER_STATUSES: OrderStatus[] = ["awaiting_payment", "confirmed", "completed", "cancelled", "expired"];
+const ORDER_STATUSES: OrderStatus[] = ["confirmed", "completed", "cancelled", "expired"];
 const FULFILLMENT_STATUSES: FulfillmentStatus[] = ["unfulfilled", "processing", "delivered", "completed", "cancelled"];
 const PAYMENT_STATUSES: PaymentAttemptStatus[] = ["pending", "requires_action", "processing", "succeeded", "failed", "cancelled", "expired", "paid", "refunded", "partially_refunded"];
 const QUEUES: Array<{ value: AdminOrderQueue; label: string; countKey: string }> = [
   { value: "all", label: "All", countKey: "all" },
-  { value: "needs_payment", label: "Needs payment", countKey: "needsPayment" },
+  { value: "needs_payment", label: "Unpaid checkouts", countKey: "needsPayment" },
   { value: "ready_for_fulfillment", label: "Ready to fulfill", countKey: "readyForFulfillment" },
   { value: "processing", label: "Processing", countKey: "processing" },
   { value: "delivered", label: "Delivered", countKey: "delivered" },

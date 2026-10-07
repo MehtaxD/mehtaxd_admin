@@ -24,6 +24,9 @@ import { isAdminRequestAuthorized, logoutAdmin } from "@/lib/admin-auth";
 import { isAdminRouteActive } from "@/lib/admin-navigation";
 import "./globals.css";
 
+const storefrontUrl =
+  process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000";
+
 const nav = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/games", label: "Games", icon: Gamepad2 },
@@ -157,7 +160,7 @@ export default function AdminLayout({
       </nav>
       <div className="adminSidebarBottom">
         <a
-          href="http://localhost:3000"
+          href={storefrontUrl}
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -251,7 +254,7 @@ export default function AdminLayout({
                   <span className="adminDot" /> Store online
                 </span>
                 <a
-                  href="http://localhost:3000"
+                  href={storefrontUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >

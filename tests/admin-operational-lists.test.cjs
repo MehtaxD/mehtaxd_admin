@@ -50,3 +50,14 @@ test("unread inbox rows use a restrained state hook without changing chat data",
   assert.match(chats, /item\.latestMessage\.body\.slice\(0, 90\)/);
   assert.match(chats, /nestjsApi\.orders\.chatInbox\(\)/);
 });
+
+test("normal Orders separates unpaid checkouts from operational status filters", () => {
+  const orders = read("src/app/admin/orders/page.tsx");
+
+  assert.match(orders, /label: "Unpaid checkouts"/);
+  assert.match(orders, /value: "needs_payment"/);
+  assert.doesNotMatch(
+    orders,
+    /const ORDER_STATUSES:[^;]+"awaiting_payment"/,
+  );
+});
