@@ -19,7 +19,7 @@ type GameFormData = {
   mark: string;
   tone: string;
   guide: string;
-  highlights: string[];
+  highlights: string;
   faqs: Faq[];
   metaTitle: string;
   metaDescription: string;
@@ -43,7 +43,7 @@ const empty: GameFormData = {
   mark: "GAME",
   tone: "neutral",
   guide: "",
-  highlights: [],
+  highlights: "",
   faqs: [{ question: "", answer: "" }],
   metaTitle: "",
   metaDescription: "",
@@ -88,7 +88,7 @@ async function loadGame() {
         mark: game.mark || "",
         tone: game.tone || "",
         guide: game.guide || "",
-        highlights: game.highlights || [],
+        highlights: (game.highlights || []).join(", "),
         iconUrl: game.iconUrl || "",
         bannerUrl: game.bannerUrl || "",
         featured: game.featured,
@@ -140,7 +140,7 @@ function buildCreateGamePayload() {
       mark: form.mark,
       tone: form.tone,
       guide: form.guide,
-      highlights: form.highlights.filter((h) => h.trim()),
+      highlights: form.highlights.split(",").map((item) => item.trim()).filter(Boolean),
       faqs: form.faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
       iconUrl: form.iconUrl || undefined,
       bannerUrl: form.bannerUrl || undefined,
@@ -180,7 +180,7 @@ function buildCreateGamePayload() {
           mark: form.mark,
           tone: form.tone,
           guide: form.guide,
-          highlights: form.highlights.filter((h) => h.trim()),
+          highlights: form.highlights.split(",").map((item) => item.trim()).filter(Boolean),
           faqs: form.faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
           iconUrl: form.iconUrl || undefined,
           bannerUrl: form.bannerUrl || undefined,
@@ -297,7 +297,7 @@ function buildCreateGamePayload() {
           </div>
           <div className="adminField full">
             <label>Highlights</label>
-            <input value={form.highlights.join(", ")} onChange={(e) => set("highlights", e.target.value.split(",").map((item) => item.trim()).filter(Boolean))} placeholder="Coins & Cash, High-balance accounts, Fast order chat" />
+            <input value={form.highlights} onChange={(e) => set("highlights", e.target.value)} placeholder="Coins & Cash, High-balance accounts, Fast order chat" />
           </div>
           <div className="adminField full">
             <label>Before-you-buy guide</label>

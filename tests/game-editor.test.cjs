@@ -17,3 +17,9 @@ test("Game Preview uses the Storefront origin and encoded slug", () => {
   assert.match(list, /NEXT_PUBLIC_STOREFRONT_URL/);
   assert.match(list, /\/games\/\$\{encodeURIComponent\(game\.slug\)\}/);
 });
+
+test("Highlights keep commas and spaces while editing and split only when saving", () => {
+  assert.match(editor, /value=\{form\.highlights\} onChange=\{\(e\) => set\("highlights", e\.target\.value\)\}/);
+  assert.match(editor, /highlights: \(game\.highlights \|\| \[\]\)\.join\(", "\)/);
+  assert.equal((editor.match(/highlights: form\.highlights\.split\(","\)/g) || []).length, 2);
+});
