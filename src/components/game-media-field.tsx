@@ -5,11 +5,14 @@ import { nestjsApi } from "@/lib/nestjs-api";
 
 type Kind = "icon" | "banner" | "og";
 
-export function GameMediaField({ kind, label, value, fallbackUrl, onChange, onUploadStateChange }: {
+export function GameMediaField({ kind, label, value, fallbackUrl, bannerUrl, gameName, gameMark, onChange, onUploadStateChange }: {
   kind: Kind;
   label: string;
   value: string;
   fallbackUrl?: string;
+  bannerUrl?: string;
+  gameName?: string;
+  gameMark?: string;
   onChange: (url: string) => void;
   onUploadStateChange: (delta: number) => void;
 }) {
@@ -18,9 +21,11 @@ export function GameMediaField({ kind, label, value, fallbackUrl, onChange, onUp
   const [message, setMessage] = useState("");
   const [loadedUrl, setLoadedUrl] = useState("");
   const [brokenUrl, setBrokenUrl] = useState("");
+  const [brokenCardUrls, setBrokenCardUrls] = useState<string[]>([]);
   const preview = value || fallbackUrl;
   const imageBroken = Boolean(preview && brokenUrl === preview);
   const imageLoaded = Boolean(preview && loadedUrl === preview);
+  const cardImage = kind === "icon" ? [bannerUrl, preview].find((url) => url && !brokenCardUrls.includes(url)) : undefined;
   const sizeHint = kind === "icon"
     ? "Recommended: 512 × 512 px, square PNG or WebP."
     : kind === "banner"
@@ -53,10 +58,28 @@ export function GameMediaField({ kind, label, value, fallbackUrl, onChange, onUp
       <div className="adminGameMediaHeading"><strong>{label}</strong><span>{imageBroken ? "Image unavailable" : kind === "og" && !value && fallbackUrl ? "Using Banner" : imageLoaded ? "Ready to save" : preview ? "Checking image…" : "No image"}</span></div>
       <p className="adminHint">{sizeHint} Maximum 5 MB.</p>
       <div className="adminGameMediaCrops">
-        <div className={`adminGameMediaPreview ${kind}`}>
-          {preview && !imageBroken ? <img src={preview} alt={`${label} crop preview`} onLoad={() => { setLoadedUrl(preview); setBrokenUrl(""); }} onError={() => setBrokenUrl(preview)} /> : <span>{imageBroken ? "Image could not be loaded" : `No ${label.toLowerCase()} selected`}</span>}
+        <div className="adminGameMediaFrame">
+          <span className="adminGameMediaCaption">{kind === "icon" ? "Icon image · 1:1" : kind === "banner" ? "Games card · desktop crop" : "Social share · 1.91:1 crop"}</span>
+          <div className={`adminGameMediaPreview ${kind}`}>
+            {preview && !imageBroken ? <img src={preview} alt={`${label} crop preview`} onLoad={() => { setLoadedUrl(preview); setBrokenUrl(""); }} onError={() => setBrokenUrl(preview)} /> : <span>{imageBroken ? "Image could not be loaded" : `No ${label.toLowerCase()} selected`}</span>}
+          </div>
         </div>
-        {kind === "banner" && preview && !imageBroken ? <div className="adminGameMediaPreview bannerMobile"><img src={preview} alt="Mobile Games listing crop preview" /></div> : null}
+        {kind === "icon" ? (
+          <div className="adminGameMediaFrame">
+            <span className="adminGameMediaCaption">Games card · live layout</span>
+            <div className="adminGameMediaCardVisual">
+              {cardImage ? <img className={cardImage === bannerUrl ? "" : "icon"} src={cardImage} alt="" onError={() => setBrokenCardUrls((urls) => urls.includes(cardImage) ? urls : [...urls, cardImage])} /> : <><span>{gameMark || "GAME"}</span><i aria-hidden="true" /></>}
+            </div>
+            <strong className="adminGameMediaCardName">{gameName || "Game name"}</strong>
+            {bannerUrl ? <small className="adminGameMediaCardNote">Banner appears here; Icon is the fallback.</small> : null}
+          </div>
+        ) : null}
+        {kind === "banner" && preview && !imageBroken ? (
+          <div className="adminGameMediaFrame">
+            <span className="adminGameMediaCaption">Games card · 390px mobile crop</span>
+            <div className="adminGameMediaPreview bannerMobile"><img src={preview} alt="Mobile Games listing crop preview" /></div>
+          </div>
+        ) : null}
       </div>
       {imageBroken ? <p className="adminNotice" role="alert">This image URL does not load. Replace it with an upload or remove it before saving.</p> : null}
       {preview ? <p className="adminHint">{kind === "banner" ? "Games listing · desktop and mobile crops" : kind === "icon" ? "Games listing fallback when no Banner is set" : "Social share · 1.91:1 crop"}</p> : null}

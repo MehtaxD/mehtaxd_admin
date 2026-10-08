@@ -373,7 +373,7 @@ function buildCreateGamePayload() {
         <h2>Media</h2>
         <p>Upload PNG, JPEG or WebP, up to 5 MB. Inspect the crop here before saving or publishing.</p>
         <div className="adminGameMediaGrid">
-          <GameMediaField kind="icon" label="Icon" value={form.iconUrl} onChange={(url) => set("iconUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
+          <GameMediaField kind="icon" label="Icon" value={form.iconUrl} bannerUrl={form.bannerUrl} gameName={form.name} gameMark={form.mark} onChange={(url) => set("iconUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
           <GameMediaField kind="banner" label="Banner" value={form.bannerUrl} onChange={(url) => set("bannerUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
           <GameMediaField kind="og" label="OG image" value={form.ogImageUrl} fallbackUrl={form.bannerUrl} onChange={(url) => set("ogImageUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
         </div>
