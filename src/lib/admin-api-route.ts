@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { safeAdminApiError } from "@/lib/safe-api-error";
+import { safeAdminApiError, safeGameUploadMessage, safeGameValidationMessage } from "@/lib/safe-api-error";
 
 const API_URL = process.env.NESTJS_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4000";
 const ACCESS_COOKIE = "mxd_admin_access";
@@ -102,8 +102,19 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
   }
   const body = binary ? await upstream.arrayBuffer() : await upstream.text();
   if (!upstream.ok) {
+    const gameRequest = /^\/games(?:\/[0-9a-fA-F-]{36})?$/.test(path);
+    const mediaRequest = path === "/admin/games/media";
+    let validationMessage: string | null = null;
+    if (!binary && ((gameRequest && (upstream.status === 400 || upstream.status === 422)) || (mediaRequest && (upstream.status === 400 || upstream.status === 422 || upstream.status === 503)))) {
+      try {
+        const payload: unknown = JSON.parse(body as string);
+        validationMessage = gameRequest ? safeGameValidationMessage(payload) : safeGameUploadMessage(payload);
+      } catch { /* Keep the generic safe error for an unexpected response. */ }
+    }
     const normalized = binary && upstream.status === 422
       ? { code: "VALIDATION_FAILED" as const, message: "Evidence integrity verification failed. The download was blocked.", retryable: false }
+      : validationMessage
+      ? { ...safeAdminApiError(upstream.status), message: validationMessage }
       : safeAdminApiError(
       upstream.status,
       binary && upstream.status === 404

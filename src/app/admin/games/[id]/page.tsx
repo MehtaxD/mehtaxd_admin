@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2 } from "@/components/icons";
 import { nestjsApi, Game, CreateGameDto, UpdateGameDto } from "@/lib/nestjs-api";
 import { BlogEditor } from "@/components/blog/blog-editor";
+import { GameMediaField } from "@/components/game-media-field";
 
 type Faq = { question: string; answer: string };
 type GameFormData = {
@@ -64,6 +65,7 @@ export default function GameEditorPage() {
 
   const [form, setForm] = useState<GameFormData>(empty);
   const [saving, setSaving] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(0);
   const [loading, setLoading] = useState(isEditing);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -156,6 +158,7 @@ function buildCreateGamePayload() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (uploadingMedia > 0) return;
     if (form.faqs.some((faq) => Boolean(faq.question.trim()) !== Boolean(faq.answer.trim()))) {
       setMessage("Complete both the question and answer for each FAQ, or remove the unfinished row.");
       setMessageType("error");
@@ -182,13 +185,13 @@ function buildCreateGamePayload() {
           guide: form.guide,
           highlights: form.highlights.split(",").map((item) => item.trim()).filter(Boolean),
           faqs: form.faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
-          iconUrl: form.iconUrl || undefined,
-          bannerUrl: form.bannerUrl || undefined,
+          iconUrl: form.iconUrl || null,
+          bannerUrl: form.bannerUrl || null,
           featured: form.featured,
           seoTitle: form.metaTitle || undefined,
           seoDescription: form.metaDescription || undefined,
           seoKeywords: form.seoKeywords || undefined,
-          ogImageUrl: form.ogImageUrl || undefined,
+          ogImageUrl: form.ogImageUrl || null,
           canonicalUrl: form.canonicalUrl || undefined,
           status: form.status,
         };
@@ -229,8 +232,8 @@ function buildCreateGamePayload() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="adminButton" href="/admin/games">Cancel</Link>
-          <button className="adminButton primary" disabled={saving} type="submit">
-            {saving ? <Loader2 size={16} /> : "Save game"}
+          <button className="adminButton primary" disabled={saving || uploadingMedia > 0} type="submit">
+            {saving ? <Loader2 size={16} /> : uploadingMedia > 0 ? "Uploading image…" : "Save game"}
           </button>
         </div>
       </div>
@@ -356,29 +359,23 @@ function buildCreateGamePayload() {
             <label>SEO keywords (comma-separated)</label>
             <input value={form.seoKeywords} onChange={(e) => set("seoKeywords", e.target.value)} placeholder="gaming, coins, accounts, boosting" />
           </div>
-          <div className="adminField">
-            <label>Canonical URL</label>
-            <input value={form.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="/games/8-ball-pool" />
-          </div>
-          <div className="adminField">
-            <label>OG Image URL</label>
-            <input value={form.ogImageUrl} onChange={(e) => set("ogImageUrl", e.target.value)} placeholder="https://mehtaxd.com/images/game-og.jpg" />
-          </div>
         </div>
+        <details className="adminGameMediaUrl adminGameSeoAdvanced">
+          <summary>Advanced SEO · Canonical URL</summary>
+          <div className="adminField">
+            <label htmlFor="game-canonical-url">Canonical URL override</label>
+            <input id="game-canonical-url" value={form.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="Generated automatically from the Game slug" />
+          </div>
+        </details>
       </section>
 
       <section className="adminSection">
         <h2>Media</h2>
-        <p>Optional icon and banner images for the game listing.</p>
-        <div className="adminFormGrid">
-          <div className="adminField full">
-            <label>Icon URL</label>
-            <input value={form.iconUrl} onChange={(e) => set("iconUrl", e.target.value)} placeholder="https://mehtaxd.com/images/game-icon.png" />
-          </div>
-          <div className="adminField full">
-            <label>Banner URL</label>
-            <input value={form.bannerUrl} onChange={(e) => set("bannerUrl", e.target.value)} placeholder="https://mehtaxd.com/images/game-banner.jpg" />
-          </div>
+        <p>Upload PNG, JPEG or WebP, up to 5 MB. Inspect the crop here before saving or publishing.</p>
+        <div className="adminGameMediaGrid">
+          <GameMediaField kind="icon" label="Icon" value={form.iconUrl} onChange={(url) => set("iconUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
+          <GameMediaField kind="banner" label="Banner" value={form.bannerUrl} onChange={(url) => set("bannerUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
+          <GameMediaField kind="og" label="OG image" value={form.ogImageUrl} fallbackUrl={form.bannerUrl} onChange={(url) => set("ogImageUrl", url)} onUploadStateChange={(delta) => setUploadingMedia((count) => count + delta)} />
         </div>
       </section>
     </form>

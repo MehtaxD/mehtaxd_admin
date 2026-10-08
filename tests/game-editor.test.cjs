@@ -6,6 +6,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const editor = fs.readFileSync(path.join(root, "src/app/admin/games/[id]/page.tsx"), "utf8");
 const list = fs.readFileSync(path.join(root, "src/app/admin/games/page.tsx"), "utf8");
+const media = fs.readFileSync(path.join(root, "src/components/game-media-field.tsx"), "utf8");
+const uploadRoute = fs.readFileSync(path.join(root, "src/app/api/admin/game-media/route.ts"), "utf8");
 
 test("Game editor reloads FAQs and includes them in create/update saves", () => {
   assert.match(editor, /faqs: game\.faqs\?\.length/);
@@ -22,4 +24,26 @@ test("Highlights keep commas and spaces while editing and split only when saving
   assert.match(editor, /value=\{form\.highlights\} onChange=\{\(e\) => set\("highlights", e\.target\.value\)\}/);
   assert.match(editor, /highlights: \(game\.highlights \|\| \[\]\)\.join\(", "\)/);
   assert.equal((editor.match(/highlights: form\.highlights\.split\(","\)/g) || []).length, 2);
+});
+
+test("Game media upload previews before save, supports replace and remove, and keeps OG inheritance visible", () => {
+  assert.match(editor, /GameMediaField kind="icon"/);
+  assert.match(editor, /GameMediaField kind="banner"/);
+  assert.match(editor, /GameMediaField kind="og"[^>]*fallbackUrl=\{form\.bannerUrl\}/);
+  assert.match(editor, /disabled=\{saving \|\| uploadingMedia > 0\}/);
+  assert.match(editor, /iconUrl: form\.iconUrl \|\| null/);
+  assert.match(editor, /bannerUrl: form\.bannerUrl \|\| null/);
+  assert.match(editor, /ogImageUrl: form\.ogImageUrl \|\| null/);
+  assert.match(media, /Upload image/);
+  assert.match(media, /Replace image/);
+  assert.match(media, /Remove/);
+  assert.match(media, /Using Banner/);
+  assert.match(media, /Social share · 1\.91:1 crop/);
+  assert.match(media, /Image unavailable/);
+  assert.match(media, /This image URL does not load/);
+  assert.match(media, /512 × 512 px/);
+  assert.match(media, /1600 × 1280 px/);
+  assert.match(media, /1200 × 630 px/);
+  assert.match(uploadRoute, /validateAdminOrigin\(request\)/);
+  assert.match(uploadRoute, /MAX_BODY_BYTES/);
 });

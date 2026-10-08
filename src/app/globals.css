@@ -1,5 +1,29 @@
 @layer reset, base, components, operational;
 
+@layer components {
+  .adminGameMediaGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .adminGameMediaField { min-width: 0; display: grid; align-content: start; gap: 10px; padding: 16px; border: 1px solid #dedede; background: #fff; }
+  .adminGameMediaHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .adminGameMediaHeading span { color: #666; font-size: 11px; }
+  .adminGameMediaCrops { display: flex; gap: 10px; align-items: start; }
+  .adminGameMediaPreview { position: relative; display: grid; place-items: center; width: min(100%, 300px); aspect-ratio: 5 / 4; overflow: hidden; background: #09090c; color: #aaa; font-size: 12px; text-align: center; }
+  .adminGameMediaPreview img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+  .adminGameMediaPreview.icon { width: min(100%, 240px); }
+  .adminGameMediaPreview.icon img { width: 70%; height: 70%; object-fit: contain; }
+  .adminGameMediaPreview.og { aspect-ratio: 1.91 / 1; }
+  .adminGameMediaPreview.bannerMobile { width: min(40%, 180px); aspect-ratio: 7 / 3; }
+  .adminGameMediaActions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .adminGameMediaActions label { position: relative; overflow: hidden; }
+  .adminGameMediaActions input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .adminGameMediaActions label:focus-within { outline: 2px solid #e6002d; outline-offset: 2px; }
+  .adminGameMediaActions label:has(input:disabled) { opacity: .6; cursor: wait; }
+  .adminGameMediaUrl summary { width: fit-content; color: #555; font-size: 12px; cursor: pointer; }
+  .adminGameMediaUrl input { width: 100%; margin-top: 8px; border: 1px solid #ddd; padding: 10px 12px; font: inherit; }
+  .adminGameSeoAdvanced { margin-top: 16px; }
+  .adminGameSeoAdvanced .adminField { margin-top: 12px; }
+  @media (max-width: 700px) { .adminGameMediaGrid { grid-template-columns: 1fr; } }
+}
+
 .adminErrorState {
   display: grid;
   align-content: center;

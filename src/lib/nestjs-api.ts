@@ -110,6 +110,23 @@ export const nestjsApi = {
   },
 
   games: {
+    uploadMedia: async (kind: "icon" | "banner" | "og", file: File): Promise<{ url: string }> => {
+      const body = new FormData();
+      body.set("kind", kind);
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/admin/game-media", { method: "POST", credentials: "same-origin", body });
+      } catch {
+        throw new Error("Image upload could not be reached. Check your connection and try again.");
+      }
+      if (response.status === 401 && typeof window !== "undefined") window.location.href = "/admin/login";
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(safeAdminErrorFromPayload(response.status, payload, "Image upload failed. Try again.").message);
+      }
+      return response.json();
+    },
     list: (params?: {
       page?: number;
       limit?: number;
@@ -946,13 +963,13 @@ export interface CreateGameDto {
   guide?: string;
   highlights?: string[];
   faqs?: Array<{ question: string; answer: string }>;
-  iconUrl?: string;
-  bannerUrl?: string;
+  iconUrl?: string | null;
+  bannerUrl?: string | null;
   featured?: boolean;
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
-  ogImageUrl?: string;
+  ogImageUrl?: string | null;
   canonicalUrl?: string;
   status?: "draft" | "published" | "archived";
 }

@@ -32,6 +32,21 @@ test("Admin normalization preserves session, conflict, and rate-limit meaning", 
   assert.equal(safeAdminApiError(429).code, "RATE_LIMITED");
 });
 
+test("Game validation names the rejected field without exposing upstream details", () => {
+  const { safeGameValidationMessage, safeGameUploadMessage } = loadNormalizer();
+  assert.equal(
+    safeGameValidationMessage({ message: ["bannerUrl must be a URL address"] }),
+    "Banner URL must be a valid full URL (https://…).",
+  );
+  assert.equal(
+    safeGameValidationMessage({ message: ["slug must be shorter than or equal to 180 characters"] }),
+    "Check Slug and try again.",
+  );
+  assert.equal(safeGameValidationMessage({ message: ["QueryFailedError: private data"] }), null);
+  assert.equal(safeGameUploadMessage({ message: "Use a valid PNG, JPEG, or WebP image." }), "Use a valid PNG, JPEG, or WebP image.");
+  assert.equal(safeGameUploadMessage({ message: "secret internal path" }), null);
+});
+
 test("Admin route boundary is actionable and does not render exception details", () => {
   const source = read("src/app/error.tsx");
   assert.match(source, /onClick=\{retry\}/);

@@ -46,3 +46,47 @@ export function safeAdminErrorFromPayload(
   return safeAdminApiError(status, fallback);
 }
 
+const gameFieldLabels: Record<string, string> = {
+  name: "Name", slug: "Slug", shortDescription: "Short description",
+  description: "Description", heroEyebrow: "Hero eyebrow", heroTitle: "Hero title",
+  heroBody: "Hero intro", mark: "Game mark", tone: "Visual tone",
+  guide: "Before-you-buy guide", highlights: "Highlights", faqs: "FAQs",
+  iconUrl: "Icon URL", bannerUrl: "Banner URL", ogImageUrl: "OG image URL",
+  featured: "Featured", seoTitle: "SEO title", seoDescription: "Meta description",
+  seoKeywords: "SEO keywords", canonicalUrl: "Canonical URL", status: "Status",
+};
+
+/** Show only known Game fields, never arbitrary upstream exception text. */
+export function safeGameValidationMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const messages = Reflect.get(payload, "message");
+  if (!Array.isArray(messages)) return null;
+  for (const item of messages) {
+    if (typeof item !== "string") continue;
+    const field = item.match(/^([a-zA-Z]+)(?:\.|\s)/)?.[1];
+    if (!field || !gameFieldLabels[field]) continue;
+    return /must be a URL address/i.test(item)
+      ? `${gameFieldLabels[field]} must be a valid full URL (https://…).`
+      : `Check ${gameFieldLabels[field]} and try again.`;
+  }
+  return null;
+}
+
+const safeGameUploadMessages = new Set([
+  "Choose an image to upload.",
+  "Image must be 5 MB or smaller.",
+  "Use a valid PNG, JPEG, or WebP image.",
+  "Unsupported Game image placement.",
+  "Image uploads are unavailable. Try again later.",
+  "Image upload could not be completed. Try again.",
+  "Image upload returned an invalid response.",
+  "Image upload returned an invalid URL.",
+  "Image upload returned an invalid image.",
+]);
+
+export function safeGameUploadMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const message = Reflect.get(payload, "message");
+  return typeof message === "string" && safeGameUploadMessages.has(message) ? message : null;
+}
+
