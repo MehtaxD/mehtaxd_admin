@@ -81,7 +81,7 @@ export default function AdminGamesPage() {
               <p>{game.shortDescription}</p>
               <div className="actions">
                 <a className="adminButton" href={`/admin/games/${game.id}`}><Edit3 size={14} /> Edit</a>
-                <Link className="adminButton" href={`/games/${game.slug}` as any} target="_blank" rel="noopener noreferrer"><Eye size={14} /> Preview</Link>
+                <a className="adminButton" href={`${process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000"}/games/${encodeURIComponent(game.slug)}`} target="_blank" rel="noopener noreferrer"><Eye size={14} /> Preview</a>
                 <button className="adminButton" style={{ color: "#e6002d", borderColor: "#e6002d" }} onClick={() => handleDelete(game.id)} disabled={deletingId === game.id}>
                   {deletingId === game.id ? "Deleting…" : <Trash2 size={14} />}
                 </button>

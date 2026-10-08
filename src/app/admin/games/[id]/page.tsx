@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Trash2, Loader2 } from "@/components/icons";
 import { nestjsApi, Game, CreateGameDto, UpdateGameDto } from "@/lib/nestjs-api";
+import { BlogEditor } from "@/components/blog/blog-editor";
 
 type Faq = { question: string; answer: string };
 type GameFormData = {
@@ -76,7 +77,7 @@ export default function GameEditorPage() {
 async function loadGame() {
     try {
       const game = await nestjsApi.games.get(gameId);
-      setForm((prev) => ({
+      setForm(() => ({
         name: game.name,
         slug: game.slug,
         shortDescription: game.shortDescription || "",
@@ -97,7 +98,7 @@ async function loadGame() {
         metaDescription: game.seoDescription || "",
         canonicalUrl: game.canonicalUrl || "",
         status: game.status || "draft",
-        faqs: prev.faqs,
+        faqs: game.faqs?.length ? game.faqs : [{ question: "", answer: "" }],
       }));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to load game");
@@ -140,6 +141,7 @@ function buildCreateGamePayload() {
       tone: form.tone,
       guide: form.guide,
       highlights: form.highlights.filter((h) => h.trim()),
+      faqs: form.faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
       iconUrl: form.iconUrl || undefined,
       bannerUrl: form.bannerUrl || undefined,
       featured: form.featured,
@@ -154,6 +156,11 @@ function buildCreateGamePayload() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (form.faqs.some((faq) => Boolean(faq.question.trim()) !== Boolean(faq.answer.trim()))) {
+      setMessage("Complete both the question and answer for each FAQ, or remove the unfinished row.");
+      setMessageType("error");
+      return;
+    }
     setSaving(true);
     setMessage("");
 
@@ -174,6 +181,7 @@ function buildCreateGamePayload() {
           tone: form.tone,
           guide: form.guide,
           highlights: form.highlights.filter((h) => h.trim()),
+          faqs: form.faqs.filter((faq) => faq.question.trim() && faq.answer.trim()),
           iconUrl: form.iconUrl || undefined,
           bannerUrl: form.bannerUrl || undefined,
           featured: form.featured,
@@ -227,7 +235,7 @@ function buildCreateGamePayload() {
         </div>
       </div>
 
-      {message && <div className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
+      {message && <div className={messageType === "success" ? "adminSuccess" : "adminNotice"} role={messageType === "error" ? "alert" : "status"}>{message}</div>}
 
       <section className="adminSection">
         <h2>Game information</h2>
@@ -248,7 +256,7 @@ function buildCreateGamePayload() {
           </div>
           <div className="adminField full">
             <label>Description</label>
-            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Full game description" rows={3} />
+            <BlogEditor mode="game" value={form.description} onChange={(html) => set("description", html)} placeholder="Full game description" ariaLabel="Game description" />
           </div>
           <div className="adminField">
             <label>Game mark</label>

@@ -918,6 +918,7 @@ export interface Game {
   tone: string;
   guide: string;
   highlights: string[];
+  faqs?: Array<{ question: string; answer: string }>;
   iconUrl: string;
   bannerUrl: string;
   featured: boolean;
@@ -944,6 +945,7 @@ export interface CreateGameDto {
   tone?: string;
   guide?: string;
   highlights?: string[];
+  faqs?: Array<{ question: string; answer: string }>;
   iconUrl?: string;
   bannerUrl?: string;
   featured?: boolean;

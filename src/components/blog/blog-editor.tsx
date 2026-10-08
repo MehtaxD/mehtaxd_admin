@@ -15,11 +15,12 @@ interface BlogEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   ariaLabel?: string;
+  mode?: "article" | "game";
 }
 
 function safeUrl(value: string, kind: Exclude<DialogKind, null>) {
   const trimmed = value.trim();
-  if (trimmed.startsWith("/")) return trimmed;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
   try {
     const parsed = new URL(trimmed);
     const schemes =
@@ -61,9 +62,11 @@ function ToolButton({
 function EditorToolbar({
   editor,
   openDialog,
+  mode,
 }: {
   editor: Editor;
   openDialog: (kind: Exclude<DialogKind, null>) => void;
+  mode: "article" | "game";
 }) {
   const heading = editor.isActive("heading", { level: 2 })
     ? "2"
@@ -77,7 +80,7 @@ function EditorToolbar({
     <div
       className="blogEditorToolbar"
       role="toolbar"
-      aria-label="Article formatting"
+      aria-label={mode === "game" ? "Game description formatting" : "Article formatting"}
     >
       <label className="blogEditorFormat">
         <span className="srOnly">Text format</span>
@@ -97,7 +100,7 @@ function EditorToolbar({
           <option value="0">Paragraph</option>
           <option value="2">H2</option>
           <option value="3">H3</option>
-          <option value="4">H4</option>
+          {mode === "article" && <option value="4">H4</option>}
         </select>
       </label>
       <span className="blogToolDivider" />
@@ -108,20 +111,20 @@ function EditorToolbar({
       >
         <strong>B</strong>
       </ToolButton>
-      <ToolButton
+      {mode === "article" && <ToolButton
         label="Italic"
         active={editor.isActive("italic")}
         onClick={() => editor.chain().focus().toggleItalic().run()}
       >
         <em>I</em>
-      </ToolButton>
-      <ToolButton
+      </ToolButton>}
+      {mode === "article" && <ToolButton
         label="Underline"
         active={editor.isActive("underline")}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
       >
         <u>U</u>
-      </ToolButton>
+      </ToolButton>}
       <span className="blogToolDivider" />
       <ToolButton
         label="Bullet list"
@@ -137,19 +140,19 @@ function EditorToolbar({
       >
         1≡
       </ToolButton>
-      <ToolButton
+      {mode === "article" && <ToolButton
         label="Blockquote"
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
       >
         “
-      </ToolButton>
-      <ToolButton
+      </ToolButton>}
+      {mode === "article" && <ToolButton
         label="Horizontal rule"
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
       >
         —
-      </ToolButton>
+      </ToolButton>}
       <span className="blogToolDivider" />
       <ToolButton
         label="Add link"
@@ -158,9 +161,9 @@ function EditorToolbar({
       >
         ↗
       </ToolButton>
-      <ToolButton label="Add image" onClick={() => openDialog("image")}>
+      {mode === "article" && <ToolButton label="Add image" onClick={() => openDialog("image")}>
         ▧
-      </ToolButton>
+      </ToolButton>}
       <span className="blogToolDivider" />
       <ToolButton
         label="Undo"
@@ -185,6 +188,7 @@ export function BlogEditor({
   onChange,
   placeholder = "Start writing your article…",
   ariaLabel = "Article content",
+  mode = "article",
 }: BlogEditorProps) {
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [url, setUrl] = useState("");
@@ -196,19 +200,27 @@ export function BlogEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3, 4] },
+        heading: { levels: mode === "game" ? [2, 3] : [2, 3, 4] },
         link: false,
         underline: false,
+        ...(mode === "game" ? {
+          italic: false,
+          strike: false,
+          blockquote: false,
+          horizontalRule: false,
+          code: false,
+          codeBlock: false,
+        } : {}),
       }),
       Placeholder.configure({ placeholder }),
-      Underline,
+      ...(mode === "article" ? [Underline] : []),
       LinkExtension.configure({
         openOnClick: false,
         autolink: true,
         linkOnPaste: true,
         defaultProtocol: "https",
       }),
-      ImageExtension.configure({ allowBase64: false }),
+      ...(mode === "article" ? [ImageExtension.configure({ allowBase64: false })] : []),
     ],
     content: value,
     editorProps: {
@@ -277,7 +289,7 @@ export function BlogEditor({
 
   return (
     <div className="blogEditor">
-      <EditorToolbar editor={editor} openDialog={openDialog} />
+      <EditorToolbar editor={editor} openDialog={openDialog} mode={mode} />
       <EditorContent editor={editor} />
       {dialog && (
         <div
