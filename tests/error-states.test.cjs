@@ -63,6 +63,7 @@ test("Product validation maps recognized nested fields without exposing backend 
 });
 
 test("Product editor keeps variants and media in the single Product workflow", () => {
+  const products = read("src/app/admin/products/page.tsx");
   const editor = read("src/app/admin/products/[id]/page.tsx");
   const variants = read("src/components/product-variants-editor.tsx");
   const media = read("src/components/product-media-editor.tsx");
@@ -72,6 +73,8 @@ test("Product editor keeps variants and media in the single Product workflow", (
   assert.match(variants, /Drag .* to reorder/);
   assert.match(media, /Upload main image/);
   assert.match(media, /Add gallery image/);
+  assert.match(products, /href=\{`\/admin\/products\/\$\{product\.id\}`\}/);
+  assert.doesNotMatch(products, /\/admin\/products\/\$\{product\.id\}\/edit/);
   assert.doesNotMatch(editor, /<label>Sort order<\/label>/);
 });
 

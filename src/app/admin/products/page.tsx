@@ -195,7 +195,7 @@ export default function AdminProductsPage() {
                 {product.price} {product.currency} · Type: {product.productType} · Sort: {product.sortOrder}
               </p>
               <div className="actions">
-                <a className="adminButton" href={`/admin/products/${product.id}/edit`}><Edit3 size={14} /> Edit</a>
+                <a className="adminButton" href={`/admin/products/${product.id}`}><Edit3 size={14} /> Edit</a>
                 <button className="adminButton" style={{ color: "#e6002d", borderColor: "#e6002d" }} onClick={() => handleDelete(product.id)} disabled={deletingId === product.id}>
                   {deletingId === product.id ? "Deleting…" : <Trash2 size={14} />}
                 </button>
