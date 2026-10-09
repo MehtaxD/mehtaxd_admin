@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "@/components/icons";
 import { AdminFieldError, nestjsApi, Product, Game, Category, UpdateProductDto, CreateProductForGameDto } from "@/lib/nestjs-api";
 import { ProductVariantsEditor, newVariant, type VariantForm } from "@/components/product-variants-editor";
 import { ProductMediaEditor, type ProductImageForm } from "@/components/product-media-editor";
+import { finalizeSlug, normalizeSlugDraft } from "@/lib/slug-input";
 
 type ProductFormData = {
   gameId: string;
@@ -71,6 +72,7 @@ export default function ProductEditorPage() {
   const router = useRouter();
   const productId = params.id as string;
   const isEditing = productId !== "new";
+  const slugTouched = useRef(isEditing);
 
   const [form, setForm] = useState<ProductFormData>(empty);
   const [variants, setVariants] = useState<VariantForm[]>([newVariant("Default", "initial")]);
@@ -170,8 +172,21 @@ export default function ProductEditorPage() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function slugify(value: string) {
-    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  function changeName(value: string) {
+    setForm((current) => ({
+      ...current,
+      name: value,
+      slug: slugTouched.current ? current.slug : finalizeSlug(value),
+    }));
+  }
+
+  function changeSlug(value: string) {
+    slugTouched.current = true;
+    set("slug", normalizeSlugDraft(value));
+  }
+
+  function finishSlug() {
+    setForm((current) => ({ ...current, slug: finalizeSlug(current.slug) }));
   }
 
   async function submit(event: React.FormEvent) {
@@ -210,7 +225,7 @@ export default function ProductEditorPage() {
         ?? [...variants].sort((a, b) => a.price - b.price)[0];
       const payload = {
         ...formFields,
-        slug: form.slug || slugify(form.name),
+        slug: finalizeSlug(form.slug || form.name),
         price: listing.price,
         compareAtPrice: listing.compareAtPrice || undefined,
         variants: variants.map((variant) => ({
@@ -325,13 +340,13 @@ export default function ProductEditorPage() {
 
           <div className="adminField">
             <label>Name <span style={{ color: "#e6002d" }}>*</span></label>
-            <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="8 Ball Pool Coins" required />
+            <input value={form.name} onChange={(e) => changeName(e.target.value)} placeholder="8 Ball Pool Coins" required />
             {fieldErrors.name ? <small className="adminFieldError" role="alert">{fieldErrors.name}</small> : null}
           </div>
 
           <div className="adminField">
             <label>Slug</label>
-            <input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="fc-25-coins-100m" />
+            <input value={form.slug} onChange={(e) => changeSlug(e.target.value)} onBlur={finishSlug} placeholder="fc-25-coins-100m" />
             {fieldErrors.slug ? <small className="adminFieldError" role="alert">{fieldErrors.slug}</small> : null}
             <span className="adminHint">Leave blank to generate from name.</span>
           </div>

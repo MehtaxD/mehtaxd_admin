@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "@/components/icons";
 import { nestjsApi, Category, Game, CreateCategoryForGameDto } from "@/lib/nestjs-api";
+import { finalizeSlug, normalizeSlugDraft } from "@/lib/slug-input";
 
 type CategoryFormData = {
   gameId: string;
@@ -79,10 +80,6 @@ export default function CategoryEditorPage() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function slugify(value: string) {
-    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  }
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -91,7 +88,7 @@ export default function CategoryEditorPage() {
     try {
       const payload: CreateCategoryForGameDto = {
         name: form.name,
-        slug: form.slug || slugify(form.name),
+        slug: finalizeSlug(form.slug || form.name),
         description: form.description,
         status: form.status,
         sortOrder: form.sortOrder,
@@ -169,7 +166,7 @@ export default function CategoryEditorPage() {
 
           <div className="adminField">
             <label>Slug</label>
-            <input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="currency" />
+            <input value={form.slug} onChange={(e) => set("slug", normalizeSlugDraft(e.target.value))} onBlur={(e) => set("slug", finalizeSlug(e.currentTarget.value))} placeholder="currency" />
             <span className="adminHint">Leave blank to generate from name.</span>
           </div>
 

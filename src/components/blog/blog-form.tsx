@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, StarIcon } from "@/components/icons";
 import { BlogEditor } from "@/components/blog/blog-editor";
 import { nestjsApi, type Blog, type BlogStatus, type CreateBlogDto } from "@/lib/nestjs-api";
+import { finalizeSlug, normalizeSlugDraft } from "@/lib/slug-input";
 
 interface BlogFormState {
   title: string;
@@ -45,10 +46,6 @@ const emptyForm: BlogFormState = {
   featuredImageAlt: "",
   authorName: "MehtaXD",
 };
-
-function slugify(value: string) {
-  return value.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
-}
 
 function toDateTimeLocal(value: string | null) {
   if (!value) return "";
@@ -115,14 +112,14 @@ export function BlogForm({ blogId }: { blogId?: string }) {
   }
 
   function changeTitle(value: string) {
-    setForm((current) => ({ ...current, title: value, slug: slugTouched.current ? current.slug : slugify(value) }));
+    setForm((current) => ({ ...current, title: value, slug: slugTouched.current ? current.slug : finalizeSlug(value) }));
   }
 
   function payload(statusOverride?: BlogStatus): CreateBlogDto {
     const status = statusOverride ?? form.status;
     return {
       title: form.title.trim(),
-      slug: form.slug.trim(),
+      slug: finalizeSlug(form.slug),
       excerpt: optional(form.excerpt),
       content: form.content,
       status,
@@ -184,7 +181,7 @@ export function BlogForm({ blogId }: { blogId?: string }) {
       <div className="blogCmsGrid">
         <main className="blogCmsMain">
           <label className="blogTitleField"><span className="srOnly">Blog title</span><input value={form.title} onChange={(event) => changeTitle(event.target.value)} placeholder="Blog Title" required maxLength={220} /></label>
-          <label className="adminField blogSlugField"><span>Slug</span><input value={form.slug} onChange={(event) => { slugTouched.current = true; set("slug", slugify(event.target.value)); }} placeholder="example-slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /><small>mehtaxd.com/blog/{form.slug || "example-slug"}</small></label>
+          <label className="adminField blogSlugField"><span>Slug</span><input value={form.slug} onChange={(event) => { slugTouched.current = true; set("slug", normalizeSlugDraft(event.target.value)); }} onBlur={(event) => set("slug", finalizeSlug(event.currentTarget.value))} placeholder="example-slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /><small>mehtaxd.com/blog/{form.slug || "example-slug"}</small></label>
           <label className="adminField blogExcerptField"><span>Short Excerpt</span><textarea value={form.excerpt} onChange={(event) => set("excerpt", event.target.value)} placeholder="A concise preview for listings, search, and sharing." maxLength={600} /><small>{form.excerpt.length} / 600</small></label>
           <div className="adminField blogContentField"><span>Article Content</span><BlogEditor value={form.content} onChange={(html) => set("content", html)} /></div>
         </main>

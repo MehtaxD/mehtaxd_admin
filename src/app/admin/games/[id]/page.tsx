@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2 } from "@/components/icons";
 import { nestjsApi, Game, CreateGameDto, UpdateGameDto } from "@/lib/nestjs-api";
 import { BlogEditor } from "@/components/blog/blog-editor";
 import { GameMediaField } from "@/components/game-media-field";
+import { finalizeSlug, normalizeSlugDraft } from "@/lib/slug-input";
 
 type Faq = { question: string; answer: string };
 type GameFormData = {
@@ -114,10 +115,6 @@ async function loadGame() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
-  function slugify(value: string) {
-    return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  }
-
   function addFaq() {
     set("faqs", [...form.faqs, { question: "", answer: "" }]);
   }
@@ -133,7 +130,7 @@ async function loadGame() {
 function buildCreateGamePayload() {
     return {
       name: form.name,
-      slug: form.slug || slugify(form.name),
+      slug: finalizeSlug(form.slug || form.name),
       shortDescription: form.shortDescription,
       description: form.description,
       heroEyebrow: form.heroEyebrow,
@@ -174,7 +171,7 @@ function buildCreateGamePayload() {
         // For editing, send only the fields that are in UpdateGameDto
         const payload = {
           name: form.name,
-          slug: form.slug || slugify(form.name),
+          slug: finalizeSlug(form.slug || form.name),
           shortDescription: form.shortDescription,
           description: form.description,
           heroEyebrow: form.heroEyebrow,
@@ -250,7 +247,7 @@ function buildCreateGamePayload() {
           </div>
           <div className="adminField">
             <label>Slug</label>
-            <input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="8-ball-pool" />
+            <input value={form.slug} onChange={(e) => set("slug", normalizeSlugDraft(e.target.value))} onBlur={(e) => set("slug", finalizeSlug(e.currentTarget.value))} placeholder="8-ball-pool" />
             <span className="adminHint">Leave blank to generate automatically from the name.</span>
           </div>
           <div className="adminField full">
