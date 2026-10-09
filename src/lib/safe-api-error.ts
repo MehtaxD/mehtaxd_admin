@@ -72,6 +72,35 @@ export function safeGameValidationMessage(payload: unknown): string | null {
   return null;
 }
 
+const productFieldLabels: Record<string, string> = {
+  gameId: "Game", categoryId: "Category", productType: "Product type",
+  name: "Name", slug: "Slug", price: "Price", compareAtPrice: "Compare-at price",
+  currency: "Currency", status: "Status", isActive: "Active", featured: "Featured",
+  shortDescription: "Short description", description: "Description",
+  requirements: "Requirements", deliveryInformation: "Delivery information",
+  seoTitle: "SEO title", seoDescription: "Meta description", seoKeywords: "SEO keywords",
+  ogImageUrl: "OG image URL", canonicalUrl: "Canonical URL",
+  variants: "Variants", images: "Product images",
+};
+
+/** Only expose recognized Product field names, not arbitrary upstream text. */
+export function safeProductValidationFields(payload: unknown): Record<string, string> {
+  if (!payload || typeof payload !== "object") return {};
+  const messages = Reflect.get(payload, "message");
+  if (!Array.isArray(messages)) return {};
+  const fields: Record<string, string> = {};
+  for (const item of messages) {
+    if (typeof item !== "string") continue;
+    const field = item.match(/^([a-zA-Z]+)(?:\.\d+\.[a-zA-Z]+)?(?:\.|\s)/)?.[1];
+    if (!field || !productFieldLabels[field]) continue;
+    const path = item.match(/^([a-zA-Z]+\.\d+\.[a-zA-Z]+)(?:\.|\s)/)?.[1] ?? field;
+    fields[path] = /must be a URL address/i.test(item)
+      ? `${productFieldLabels[field]} needs a valid full HTTPS URL.`
+      : `Check ${productFieldLabels[field]}.`;
+  }
+  return fields;
+}
+
 const safeGameUploadMessages = new Set([
   "Choose an image to upload.",
   "Image must be 5 MB or smaller.",

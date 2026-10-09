@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { safeAdminApiError, safeGameUploadMessage, safeGameValidationMessage } from "@/lib/safe-api-error";
+import { safeAdminApiError, safeGameUploadMessage, safeGameValidationMessage, safeProductValidationFields } from "@/lib/safe-api-error";
 
 const API_URL = process.env.NESTJS_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:4000";
 const ACCESS_COOKIE = "mxd_admin_access";
@@ -103,12 +103,15 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
   const body = binary ? await upstream.arrayBuffer() : await upstream.text();
   if (!upstream.ok) {
     const gameRequest = /^\/games(?:\/[0-9a-fA-F-]{36})?$/.test(path);
-    const mediaRequest = path === "/admin/games/media";
+    const productRequest = /^\/(?:games\/[0-9a-fA-F-]{36}\/products|products\/[0-9a-fA-F-]{36})$/.test(path);
+    const mediaRequest = path === "/admin/games/media" || path === "/admin/products/media";
     let validationMessage: string | null = null;
-    if (!binary && ((gameRequest && (upstream.status === 400 || upstream.status === 422)) || (mediaRequest && (upstream.status === 400 || upstream.status === 422 || upstream.status === 503)))) {
+    let productFields: Record<string, string> = {};
+    if (!binary && ((gameRequest || productRequest) && (upstream.status === 400 || upstream.status === 422) || (mediaRequest && (upstream.status === 400 || upstream.status === 422 || upstream.status === 503)))) {
       try {
         const payload: unknown = JSON.parse(body as string);
-        validationMessage = gameRequest ? safeGameValidationMessage(payload) : safeGameUploadMessage(payload);
+        validationMessage = gameRequest ? safeGameValidationMessage(payload) : mediaRequest ? safeGameUploadMessage(payload) : null;
+        if (productRequest) productFields = safeProductValidationFields(payload);
       } catch { /* Keep the generic safe error for an unexpected response. */ }
     }
     const normalized = binary && upstream.status === 422
@@ -123,7 +126,7 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
         ? "The requested Admin record was not found. Refresh the page and try again."
         : undefined,
     );
-    const response = NextResponse.json(normalized, { status: upstream.status });
+    const response = NextResponse.json(Object.keys(productFields).length ? { ...normalized, fields: productFields } : normalized, { status: upstream.status });
     if (rotated) setAdminCookies(response, rotated);
     if (upstream.status === 401) clearAdminCookies(response);
     return response;

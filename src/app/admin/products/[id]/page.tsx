@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "@/components/icons";
-import { nestjsApi, Product, Game, Category, CreateProductDto, UpdateProductDto, CreateProductForGameDto } from "@/lib/nestjs-api";
+import { AdminFieldError, nestjsApi, Product, Game, Category, UpdateProductDto, CreateProductForGameDto } from "@/lib/nestjs-api";
+import { ProductVariantsEditor, newVariant, type VariantForm } from "@/components/product-variants-editor";
+import { ProductMediaEditor, type ProductImageForm } from "@/components/product-media-editor";
 
 type ProductFormData = {
   gameId: string;
@@ -71,6 +73,10 @@ export default function ProductEditorPage() {
   const isEditing = productId !== "new";
 
   const [form, setForm] = useState<ProductFormData>(empty);
+  const [variants, setVariants] = useState<VariantForm[]>([newVariant("Default", "initial")]);
+  const [images, setImages] = useState<ProductImageForm[]>([]);
+  const [pendingUploads, setPendingUploads] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [games, setGames] = useState<Game[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [saving, setSaving] = useState(false);
@@ -90,9 +96,6 @@ export default function ProductEditorPage() {
   useEffect(() => {
     if (form.gameId) {
       loadCategories();
-    } else {
-      setCategories([]);
-      setForm((prev) => ({ ...prev, categoryId: "" }));
     }
   }, [form.gameId]);
 
@@ -145,7 +148,16 @@ export default function ProductEditorPage() {
         canonicalUrl: product.canonicalUrl ?? "",
       };
       setForm(productData);
-      await loadCategories();
+      setVariants(product.variants.length
+        ? product.variants.map((variant) => ({
+            key: variant.id, id: variant.id, label: variant.label,
+            description: variant.description ?? "", price: Number(variant.price),
+            compareAtPrice: Number(variant.compareAtPrice ?? 0), isActive: variant.isActive,
+          }))
+        : [{ ...newVariant("Default", "legacy-default"), price: Number(product.price), compareAtPrice: Number(product.compareAtPrice ?? 0) }]);
+      setImages(product.images.map((image, index) => ({
+        key: `saved-${index}`, imageUrl: image.imageUrl, altText: image.altText ?? "",
+      })));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to load product");
       setMessageType("error");
@@ -164,15 +176,52 @@ export default function ProductEditorPage() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    setSaving(true);
     setMessage("");
+    setFieldErrors({});
+
+    const localErrors: Record<string, string> = {};
+    if (!form.gameId) localErrors.gameId = "Choose a Game.";
+    if (!form.categoryId) localErrors.categoryId = "Choose a Category.";
+    if (!form.name.trim()) localErrors.name = "Enter a Product name.";
+    if (!variants.length) localErrors.variants = "Add at least one option.";
+    variants.forEach((variant, index) => {
+      if (!variant.label.trim()) localErrors[`variants.${index}.label`] = "Enter an option name.";
+      if (!Number.isFinite(variant.price) || variant.price < 0) localErrors[`variants.${index}.price`] = "Enter a valid price.";
+    });
+    if (form.status === "published" && form.isActive && !variants.some((variant) => variant.isActive))
+      localErrors.variants = "A published Product needs an active option.";
+    for (const key of ["ogImageUrl", "canonicalUrl"] as const) {
+      const value = form[key].trim();
+      if (value && (!/^https:\/\//i.test(value) || !URL.canParse(value)))
+        localErrors[key] = "Enter a valid full HTTPS URL or leave this blank.";
+    }
+    if (Object.keys(localErrors).length) {
+      setFieldErrors(localErrors);
+      setMessage("Review the marked fields and try again.");
+      setMessageType("error");
+      return;
+    }
+    if (pendingUploads) return;
+    setSaving(true);
 
     try {
       const { gameId, ...formFields } = form;
+      const listing = [...variants].filter((variant) => variant.isActive).sort((a, b) => a.price - b.price)[0]
+        ?? [...variants].sort((a, b) => a.price - b.price)[0];
       const payload = {
         ...formFields,
         slug: form.slug || slugify(form.name),
-        compareAtPrice: form.compareAtPrice || undefined,
+        price: listing.price,
+        compareAtPrice: listing.compareAtPrice || undefined,
+        variants: variants.map((variant) => ({
+          ...(variant.id ? { id: variant.id } : {}),
+          label: variant.label.trim(), description: variant.description.trim(), price: variant.price,
+          ...(variant.compareAtPrice ? { compareAtPrice: variant.compareAtPrice } : {}),
+          isActive: variant.isActive,
+        })),
+        images: images.map((image) => ({ imageUrl: image.imageUrl, altText: image.altText.trim() })),
+        ogImageUrl: form.ogImageUrl.trim() || (isEditing ? null : undefined),
+        canonicalUrl: form.canonicalUrl.trim() || (isEditing ? null : undefined),
         currency: "USD",
       };
 
@@ -180,7 +229,7 @@ export default function ProductEditorPage() {
       if (isEditing) {
         result = await nestjsApi.products.update(productId, payload as UpdateProductDto);
       } else {
-        result = await nestjsApi.products.createForGame(form.gameId, payload as CreateProductForGameDto);
+        result = await nestjsApi.products.createForGame(gameId, payload as CreateProductForGameDto);
       }
 
       setMessage(`Saved product "${result.name}"`);
@@ -188,6 +237,7 @@ export default function ProductEditorPage() {
       router.push("/admin/products");
       router.refresh();
     } catch (error) {
+      if (error instanceof AdminFieldError) setFieldErrors(error.fields);
       setMessage(error instanceof Error ? error.message : "Could not save product");
       setMessageType("error");
     } finally {
@@ -209,11 +259,11 @@ export default function ProductEditorPage() {
         <div>
           <div className="adminEyebrow">Catalog · Products</div>
           <h1>{isEditing ? "Edit product" : "Create new product"}</h1>
-          <p>Select a game first, then its category. Fill in all product details including pricing, SEO, and delivery information.</p>
+          <p>Choose the game and category, then set the options customers can buy.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="adminButton" href="/admin/products">Cancel</Link>
-          <button className="adminButton primary" disabled={saving} type="submit">
+          <button className="adminButton primary" disabled={saving || pendingUploads > 0} type="submit">
             {saving ? <Loader2 size={16} /> : "Save product"}
           </button>
         </div>
@@ -224,13 +274,16 @@ export default function ProductEditorPage() {
       {categoriesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Categories couldn’t load for the selected game.</span><button type="button" className="adminButton" onClick={() => void loadCategories()}>Try again</button></div> : null}
 
       <section className="adminSection">
-        <h2>Basic information</h2>
+        <h2>General</h2>
         <div className="adminFormGrid">
           <div className="adminField">
             <label>Game <span style={{ color: "#e6002d" }}>*</span></label>
             <select
               value={form.gameId}
-              onChange={(e) => set("gameId", e.target.value)}
+              onChange={(e) => {
+                setCategories([]);
+                setForm((current) => ({ ...current, gameId: e.target.value, categoryId: "" }));
+              }}
               required
               disabled={isEditing || gamesError}
             >
@@ -239,6 +292,7 @@ export default function ProductEditorPage() {
                 <option key={game.id} value={game.id}>{game.name}</option>
               ))}
             </select>
+            {fieldErrors.gameId ? <small className="adminFieldError" role="alert">{fieldErrors.gameId}</small> : null}
             {isEditing && <span className="adminHint">Game cannot be changed after creation.</span>}
           </div>
 
@@ -255,6 +309,7 @@ export default function ProductEditorPage() {
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
+            {fieldErrors.categoryId ? <small className="adminFieldError" role="alert">{fieldErrors.categoryId}</small> : null}
             {!form.gameId && <span className="adminHint">Select a game first.</span>}
           </div>
 
@@ -265,81 +320,32 @@ export default function ProductEditorPage() {
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
+            {fieldErrors.productType ? <small className="adminFieldError" role="alert">{fieldErrors.productType}</small> : null}
           </div>
 
           <div className="adminField">
             <label>Name <span style={{ color: "#e6002d" }}>*</span></label>
-            <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="100M FC 25 Coins" required />
+            <input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="8 Ball Pool Coins" required />
+            {fieldErrors.name ? <small className="adminFieldError" role="alert">{fieldErrors.name}</small> : null}
           </div>
 
           <div className="adminField">
             <label>Slug</label>
             <input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="fc-25-coins-100m" />
+            {fieldErrors.slug ? <small className="adminFieldError" role="alert">{fieldErrors.slug}</small> : null}
             <span className="adminHint">Leave blank to generate from name.</span>
           </div>
-
-          <div className="adminField full">
-            <label>Short description</label>
-            <textarea value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} placeholder="Quick summary for listings" rows={2} />
-          </div>
         </div>
       </section>
 
       <section className="adminSection">
-        <h2>Pricing & Availability</h2>
-        <div className="adminFormGrid">
-          <div className="adminField">
-            <label>Price <span style={{ color: "#e6002d" }}>*</span></label>
-            <input type="number" step="0.01" min="0" value={form.price} onChange={(e) => set("price", Number(e.target.value))} required />
-          </div>
-
-          <div className="adminField">
-            <label>Compare-at price</label>
-            <input type="number" step="0.01" min="0" value={form.compareAtPrice} onChange={(e) => set("compareAtPrice", Number(e.target.value))} />
-          </div>
-
-          <div className="adminField">
-            <label>Currency</label>
-            <input value="USD" readOnly aria-readonly="true" />
-            <span className="adminHint">The storefront currently supports USD only.</span>
-          </div>
-
-          <div className="adminField">
-            <label>Status</label>
-            <select value={form.status} onChange={(e) => set("status", e.target.value as ProductFormData["status"])}>
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="archived">Archived</option>
-            </select>
-          </div>
-
-          <div className="adminField">
-            <label>
-              <input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Active
-            </label>
-          </div>
-
-          <div className="adminField">
-            <label>
-              <input type="checkbox" checked={form.featured} onChange={(e) => set("featured", e.target.checked)} /> Featured
-            </label>
-          </div>
-
-          <div className="adminField">
-            <label>Sort order</label>
-            <input type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} />
-          </div>
-        </div>
+        <h2>Variants</h2>
+        <ProductVariantsEditor variants={variants} onChange={setVariants} errors={fieldErrors} />
       </section>
 
       <section className="adminSection">
-        <h2>Description & Delivery</h2>
+        <h2>Delivery</h2>
         <div className="adminFormGrid">
-          <div className="adminField full">
-            <label>Full description</label>
-            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Detailed product description" rows={6} />
-          </div>
-
           <div className="adminField full">
             <label>Requirements</label>
             <textarea value={form.requirements} onChange={(e) => set("requirements", e.target.value)} placeholder="Describe what the customer needs before delivery." rows={4} />
@@ -353,7 +359,34 @@ export default function ProductEditorPage() {
       </section>
 
       <section className="adminSection">
-        <h2>SEO</h2>
+        <h2>Media</h2>
+        <ProductMediaEditor images={images} onChange={setImages} onUploadStateChange={(delta) => setPendingUploads((count) => count + delta)} productName={form.name} />
+      </section>
+
+      <section className="adminSection">
+        <h2>Storefront</h2>
+        <div className="adminFormGrid">
+          <div className="adminField full">
+            <label>Short description</label>
+            <textarea value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} rows={2} placeholder="A concise summary for product listings" />
+          </div>
+          <div className="adminField full">
+            <label>Full description</label>
+            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Detailed product description" rows={6} />
+          </div>
+          <div className="adminField">
+            <label>Status</label>
+            <select value={form.status} onChange={(e) => set("status", e.target.value as ProductFormData["status"])}>
+              <option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
+            </select>
+          </div>
+          <div className="adminField"><label><input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Active</label></div>
+          <div className="adminField"><label><input type="checkbox" checked={form.featured} onChange={(e) => set("featured", e.target.checked)} /> Featured</label></div>
+        </div>
+      </section>
+
+      <section className="adminSection">
+        <h2>SEO / Advanced</h2>
         <div className="adminFormGrid">
           <div className="adminField full">
             <label>SEO title</label>
@@ -373,11 +406,13 @@ export default function ProductEditorPage() {
           <div className="adminField">
             <label>OG Image URL</label>
             <input value={form.ogImageUrl} onChange={(e) => set("ogImageUrl", e.target.value)} placeholder="https://mehtaxd.com/images/product-og.jpg" />
+            {fieldErrors.ogImageUrl ? <small className="adminFieldError" role="alert">{fieldErrors.ogImageUrl}</small> : null}
           </div>
 
           <div className="adminField">
             <label>Canonical URL</label>
-            <input value={form.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="/products/fc-25-coins-100m" />
+            <input value={form.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="https://mehtaxd.com/products/product-slug" />
+            {fieldErrors.canonicalUrl ? <small className="adminFieldError" role="alert">{fieldErrors.canonicalUrl}</small> : null}
           </div>
         </div>
       </section>

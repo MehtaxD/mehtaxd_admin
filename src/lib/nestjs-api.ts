@@ -1,5 +1,9 @@
 import { safeAdminErrorFromPayload } from "@/lib/safe-api-error";
 
+export class AdminFieldError extends Error {
+  constructor(message: string, readonly fields: Record<string, string>) { super(message); }
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -26,7 +30,11 @@ async function request<T>(
     try {
       errorData = JSON.parse(errorText);
     } catch {}
-    throw new Error(safeAdminErrorFromPayload(response.status, errorData).message);
+    const safe = safeAdminErrorFromPayload(response.status, errorData);
+    const fields = errorData && typeof errorData === "object" ? Reflect.get(errorData, "fields") : null;
+    if (fields && typeof fields === "object" && !Array.isArray(fields))
+      throw new AdminFieldError(safe.message, fields as Record<string, string>);
+    throw new Error(safe.message);
   }
 
   if (response.status === 204) {
@@ -190,6 +198,22 @@ export const nestjsApi = {
   },
 
   products: {
+    uploadMedia: async (file: File): Promise<{ url: string }> => {
+      const body = new FormData();
+      body.set("file", file);
+      let response: Response;
+      try {
+        response = await fetch("/api/admin/product-media", { method: "POST", credentials: "same-origin", body });
+      } catch {
+        throw new Error("Image upload could not be reached. Check your connection and try again.");
+      }
+      if (response.status === 401 && typeof window !== "undefined") window.location.href = "/admin/login";
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(safeAdminErrorFromPayload(response.status, payload, "Image upload failed. Try again.").message);
+      }
+      return response.json();
+    },
     list: (params?: {
       page?: number;
       limit?: number;
@@ -1030,6 +1054,16 @@ export interface Product {
   seoKeywords: string | null;
   ogImageUrl: string | null;
   canonicalUrl: string | null;
+  variants: Array<{
+    id: string;
+    label: string;
+    description: string | null;
+    price: string;
+    compareAtPrice: string | null;
+    isActive: boolean;
+    sortOrder: number;
+  }>;
+  images: Array<{ imageUrl: string; altText: string | null; sortOrder: number }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -1049,6 +1083,15 @@ export interface CreateProductDto {
     | "other";
   price: number;
   compareAtPrice?: number;
+  variants?: Array<{
+    id?: string;
+    label: string;
+    description?: string;
+    price: number;
+    compareAtPrice?: number;
+    isActive: boolean;
+  }>;
+  images?: Array<{ imageUrl: string; altText?: string }>;
   currency?: string;
   status?: "draft" | "published" | "archived";
   isActive?: boolean;
@@ -1061,8 +1104,8 @@ export interface CreateProductDto {
   seoTitle?: string;
   seoDescription?: string;
   seoKeywords?: string;
-  ogImageUrl?: string;
-  canonicalUrl?: string;
+  ogImageUrl?: string | null;
+  canonicalUrl?: string | null;
 }
 
 export interface CreateProductForGameDto extends Omit<

@@ -2526,6 +2526,30 @@
     color: #999;
   }
 
+  .adminFieldError { color: #b00020; font-size: 12px; }
+  .adminProductVariants, .adminProductMedia { display: grid; gap: 12px; }
+  .adminProductVariant, .adminProductMediaItem { border: 1px solid #dedee1; background: #fff; }
+  .adminProductVariantHead { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+  .adminProductDrag { cursor: grab; color: #777; padding: 8px; user-select: none; }
+  .adminProductVariantToggle { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: space-between; gap: 10px; border: 0; background: none; text-align: left; cursor: pointer; }
+  .adminProductVariantToggle span { color: #777; font-size: 12px; }
+  .adminProductVariantActions, .adminProductVariantFooter, .adminProductMediaActions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .adminProductVariantBody { border-top: 1px solid #eee; padding: 16px; }
+  .adminProductVariantActive, .adminProductVariantFooter { grid-column: 1 / -1; }
+  .adminProductMediaItem { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; padding: 12px; }
+  .adminProductMediaCrop { aspect-ratio: 6 / 5; display: grid; place-items: center; overflow: hidden; background: #111; color: #fff; font-size: 12px; }
+  .adminProductMediaCrop img { width: 100%; height: 100%; object-fit: cover; }
+  .adminProductMediaDetails { display: grid; align-content: start; gap: 12px; min-width: 0; }
+  .adminProductMediaActions input[type="file"], .adminProductMediaAdd input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .adminProductMediaActions label, .adminProductMediaAdd { position: relative; cursor: pointer; }
+  .adminProductMediaAdd { justify-self: start; }
+  @media (max-width: 640px) {
+    .adminProductVariantHead { flex-wrap: wrap; }
+    .adminProductVariantToggle { min-width: calc(100% - 50px); }
+    .adminProductMediaItem { grid-template-columns: 1fr; }
+    .adminProductMediaCrop { max-width: 220px; }
+  }
+
   .adminIconButton {
     display: grid;
     place-items: center;

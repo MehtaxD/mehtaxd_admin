@@ -47,6 +47,34 @@ test("Game validation names the rejected field without exposing upstream details
   assert.equal(safeGameUploadMessage({ message: "secret internal path" }), null);
 });
 
+test("Product validation maps recognized nested fields without exposing backend details", () => {
+  const { safeProductValidationFields } = loadNormalizer();
+  assert.deepEqual(
+    safeProductValidationFields({ message: [
+      "variants.0.price must not be less than 0",
+      "canonicalUrl must be a URL address",
+      "QueryFailedError: private constraint name",
+    ] }),
+    {
+      "variants.0.price": "Check Variants.",
+      canonicalUrl: "Canonical URL needs a valid full HTTPS URL.",
+    },
+  );
+});
+
+test("Product editor keeps variants and media in the single Product workflow", () => {
+  const editor = read("src/app/admin/products/[id]/page.tsx");
+  const variants = read("src/components/product-variants-editor.tsx");
+  const media = read("src/components/product-media-editor.tsx");
+  assert.match(editor, /<h2>Variants<\/h2>/);
+  assert.match(editor, /<h2>Media<\/h2>/);
+  assert.match(variants, /Duplicate/);
+  assert.match(variants, /Drag .* to reorder/);
+  assert.match(media, /Upload main image/);
+  assert.match(media, /Add gallery image/);
+  assert.doesNotMatch(editor, /<label>Sort order<\/label>/);
+});
+
 test("Admin route boundary is actionable and does not render exception details", () => {
   const source = read("src/app/error.tsx");
   assert.match(source, /onClick=\{retry\}/);
