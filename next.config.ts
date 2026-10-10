@@ -1,5 +1,24 @@
 import type { NextConfig } from "next";
 
+function environmentUrl(name: string, value: string | undefined, localDefault: string) {
+  if (!value && process.env.NODE_ENV !== "production") return localDefault;
+  if (!value) throw new Error(`${name} is required in production.`);
+
+  const url = new URL(value);
+  if (
+    process.env.NODE_ENV === "production" &&
+    (url.protocol !== "https:" || ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
+  ) {
+    throw new Error(`${name} must be a public HTTPS URL in production.`);
+  }
+  return value.replace(/\/$/, "");
+}
+
+const publicApiUrl = environmentUrl("NEXT_PUBLIC_API_URL", process.env.NEXT_PUBLIC_API_URL, "http://localhost:4000");
+environmentUrl("NESTJS_API_URL", process.env.NESTJS_API_URL ?? process.env.NEXT_PUBLIC_API_URL, "http://127.0.0.1:4000");
+environmentUrl("ADMIN_URL", process.env.ADMIN_URL, "http://localhost:3001");
+environmentUrl("NEXT_PUBLIC_STOREFRONT_URL", process.env.NEXT_PUBLIC_STOREFRONT_URL, "http://localhost:3000");
+
 const nextConfig: NextConfig = {
   allowedDevOrigins:
     process.env.NODE_ENV === "development" ? ["192.168.1.69"] : undefined,
@@ -9,7 +28,7 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   async headers() {
     const production = process.env.NODE_ENV === "production";
-    const apiOrigin = new URL(process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").origin;
+    const apiOrigin = new URL(publicApiUrl).origin;
     const socketOrigin = apiOrigin.replace(/^http/, "ws");
     return [
       {
