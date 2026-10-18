@@ -11,6 +11,8 @@ const allowed: Record<string, RegExp[]> = {
     /^admin\/payment-profiles(\/configuration|\/products)?(\?.*)?$/,
     new RegExp(`^admin/payment-profiles/${uuid}$`),
     /^admin\/(games|categories|products|blogs|legal-pages|orders|order-chats|customers)(\?.*)?$/,
+    /^admin\/reviews(\?.*)?$/,
+    /^admin\/reviews\/summary(\?.*)?$/,
     new RegExp(`^admin/legal-pages/${legalPage}(\\?.*)?$`),
     new RegExp(
       `^admin/(games|categories|products|blogs|orders)/${uuid}(\\?.*)?$`,
@@ -40,6 +42,8 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^admin/payment-profiles/${uuid}(/assignments)?$`),
     new RegExp(`^(games|categories|products)/${uuid}$`),
     new RegExp(`^admin/blogs/${uuid}(/archive)?$`),
+    /^admin\/reviews\/homepage-order$/,
+    new RegExp(`^admin/reviews/${uuid}$`),
     new RegExp(`^admin/legal-pages/${legalPage}$`),
     new RegExp(`^admin/customers/${customerUuid}/status$`),
     new RegExp(`^admin/orders/${uuid}/(status|fulfillment-status)$`),
@@ -48,6 +52,7 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(`^admin/payment-profiles/${uuid}$`),
     new RegExp(`^(games|categories|products)/${uuid}$`),
     new RegExp(`^admin/blogs/${uuid}$`),
+    new RegExp(`^admin/reviews/${uuid}$`),
   ],
 };
 

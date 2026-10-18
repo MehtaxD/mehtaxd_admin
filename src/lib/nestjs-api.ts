@@ -318,6 +318,43 @@ export const nestjsApi = {
       }),
   },
 
+  reviews: {
+    list: (params?: {
+      page?: number;
+      pageSize?: number;
+      published?: boolean;
+      featured?: boolean;
+    }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set("page", String(params.page));
+      if (params?.pageSize)
+        searchParams.set("pageSize", String(params.pageSize));
+      if (params?.published !== undefined)
+        searchParams.set("published", String(params.published));
+      if (params?.featured !== undefined)
+        searchParams.set("featured", String(params.featured));
+      const query = searchParams.toString();
+      return request<AdminReviewList>(
+        `/admin/reviews${query ? `?${query}` : ""}`,
+      );
+    },
+    summary: () => request<AdminReviewSummary>("/admin/reviews/summary"),
+    update: (id: string, data: UpdateAdminReviewDto) =>
+      request<AdminReview>(`/admin/reviews/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    reorderHomepage: (ids: string[]) =>
+      request<{ success: true; ordered: number }>(
+        "/admin/reviews/homepage-order",
+        { method: "PATCH", body: JSON.stringify({ ids }) },
+      ),
+    delete: (id: string) =>
+      request<{ success: true; id: string }>(`/admin/reviews/${id}`, {
+        method: "DELETE",
+      }),
+  },
+
   legalPages: {
     list: () => request<LegalPage[]>("/admin/legal-pages"),
     get: (pageKey: LegalPageKey) =>
@@ -870,6 +907,44 @@ export interface AdminOrderList {
 }
 
 export type BlogStatus = "draft" | "published" | "archived";
+
+export interface AdminReview {
+  id: string;
+  reviewMessage: string;
+  feedbackRating: string | null;
+  feedbackTags: string[];
+  wasInitialRatingPositive: boolean;
+  orderCreatedAt: string | null;
+  orderCompletedAt: string | null;
+  gameTitle: string | null;
+  category: string | null;
+  productTitle: string | null;
+  published: boolean;
+  homepageFeatured: boolean;
+  sortOrder: number;
+  importedAt: string;
+  updatedAt: string;
+}
+
+export interface AdminReviewList {
+  items: AdminReview[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface AdminReviewSummary {
+  total: number;
+  published: number;
+  homepageFeatured: number;
+}
+
+export interface UpdateAdminReviewDto {
+  published?: boolean;
+  homepageFeatured?: boolean;
+  sortOrder?: number;
+}
 
 export interface Blog {
   id: string;

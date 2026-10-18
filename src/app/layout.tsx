@@ -18,6 +18,7 @@ import {
   Users,
   LogOut,
   Menu,
+  MessageCircle,
   X,
 } from "@/components/icons";
 import { isAdminRequestAuthorized, logoutAdmin } from "@/lib/admin-auth";
@@ -34,6 +35,7 @@ const nav = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/payment-eligibility", label: "Payment Eligibility", icon: Settings },
   { href: "/admin/blogs", label: "Blog", icon: BookOpen },
+  { href: "/admin/reviews", label: "Reviews", icon: MessageCircle },
   { href: "/admin/legal-pages", label: "Legal Pages", icon: FileText },
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/chats", label: "Chats", icon: Headset },
