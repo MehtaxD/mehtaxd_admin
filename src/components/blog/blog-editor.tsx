@@ -9,13 +9,14 @@ import LinkExtension from "@tiptap/extension-link";
 import ImageExtension from "@tiptap/extension-image";
 
 type DialogKind = "link" | "image" | null;
+type EditorMode = "article" | "game" | "product";
 
 interface BlogEditorProps {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
   ariaLabel?: string;
-  mode?: "article" | "game";
+  mode?: EditorMode;
 }
 
 function safeUrl(value: string, kind: Exclude<DialogKind, null>) {
@@ -66,7 +67,7 @@ function EditorToolbar({
 }: {
   editor: Editor;
   openDialog: (kind: Exclude<DialogKind, null>) => void;
-  mode: "article" | "game";
+  mode: EditorMode;
 }) {
   const heading = editor.isActive("heading", { level: 2 })
     ? "2"
@@ -80,7 +81,11 @@ function EditorToolbar({
     <div
       className="blogEditorToolbar"
       role="toolbar"
-      aria-label={mode === "game" ? "Game description formatting" : "Article formatting"}
+      aria-label={
+        mode === "article"
+          ? "Article formatting"
+          : `${mode === "game" ? "Game" : "Product"} description formatting`
+      }
     >
       <label className="blogEditorFormat">
         <span className="srOnly">Text format</span>
@@ -111,7 +116,7 @@ function EditorToolbar({
       >
         <strong>B</strong>
       </ToolButton>
-      {mode === "article" && <ToolButton
+      {mode !== "game" && <ToolButton
         label="Italic"
         active={editor.isActive("italic")}
         onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -200,17 +205,17 @@ export function BlogEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: mode === "game" ? [2, 3] : [2, 3, 4] },
+        heading: { levels: mode === "article" ? [2, 3, 4] : [2, 3] },
         link: false,
         underline: false,
-        ...(mode === "game" ? {
-          italic: false,
+        ...(mode !== "article" ? {
           strike: false,
           blockquote: false,
           horizontalRule: false,
           code: false,
           codeBlock: false,
         } : {}),
+        ...(mode === "game" ? { italic: false } : {}),
       }),
       Placeholder.configure({ placeholder }),
       ...(mode === "article" ? [Underline] : []),
@@ -252,8 +257,7 @@ export function BlogEditor({
     setError("");
   }
 
-  function applyDialog(event: React.FormEvent) {
-    event.preventDefault();
+  function applyDialog() {
     if (!editor || !dialog) return;
     const validated = safeUrl(url, dialog);
     if (!validated) {
@@ -298,12 +302,17 @@ export function BlogEditor({
             if (event.currentTarget === event.target) closeDialog();
           }}
         >
-          <form
+          <div
             className="blogModal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="blog-dialog-title"
-            onSubmit={applyDialog}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                applyDialog();
+              }
+            }}
           >
             <div className="blogModalHead">
               <div>
@@ -361,11 +370,15 @@ export function BlogEditor({
               >
                 Cancel
               </button>
-              <button className="adminButton primary" type="submit">
+              <button
+                className="adminButton primary"
+                type="button"
+                onClick={applyDialog}
+              >
                 {dialog === "link" ? "Apply Link" : "Insert Image"}
               </button>
             </div>
-          </form>
+          </div>
         </div>
       )}
     </div>

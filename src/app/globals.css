@@ -1380,6 +1380,13 @@
     border-radius: 11px;
     color: #888;
   }
+  .productDescriptionField .blogEditorContent,
+  .productDescriptionField .blogEditorLoading {
+    min-height: 280px;
+  }
+  .productDescriptionField .blogEditorContent {
+    padding: 20px 22px 48px;
+  }
 
   .blogCmsSidebar {
     min-width: 0;
@@ -2527,7 +2534,19 @@
   }
 
   .adminFieldError { color: #b00020; font-size: 12px; }
-  .adminProductVariants, .adminProductMedia { display: grid; gap: 12px; }
+  .adminProductVariants, .adminProductOptions, .adminProductMedia { display: grid; gap: 12px; }
+  .adminProductOptionsIntro, .adminProductOptionGroupHead, .adminProductOptionValue, .adminCombinationGroupHead { display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+  .adminProductOptionsIntro p { margin: 4px 0 0; }
+  .adminProductOptionGroup, .adminCombinationGroup { border: 1px solid #dedee1; background: #fafafa; padding: 14px; }
+  .adminProductOptionGroupHead .adminField, .adminProductOptionValue .adminField { flex: 1; min-width: 0; }
+  .adminProductOptionValues { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e5e7; }
+  .adminAddOptionValue { justify-self: start; }
+  .adminCombinationGroup { display: grid; gap: 10px; }
+  .adminCombinationGroupHead > div { display: grid; gap: 3px; }
+  .adminCombinationGroupToggle { display: grid; flex: 1; gap: 3px; min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+  .adminCombinationGroupToggle span { color: #777; font-size: 12px; }
+  .adminCombinationGroupHead span, .adminEmptyCompact { color: #777; font-size: 12px; }
+  .adminEmptyCompact { margin: 0; padding: 10px 0 2px; }
   .adminProductVariant, .adminProductMediaItem { border: 1px solid #dedee1; background: #fff; }
   .adminProductVariantHead { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
   .adminProductDrag { cursor: grab; color: #777; padding: 8px; user-select: none; }
@@ -2544,6 +2563,8 @@
   .adminProductMediaActions label, .adminProductMediaAdd { position: relative; cursor: pointer; }
   .adminProductMediaAdd { justify-self: start; }
   @media (max-width: 640px) {
+    .adminProductOptionsIntro, .adminProductOptionGroupHead, .adminProductOptionValue, .adminCombinationGroupHead { align-items: stretch; flex-direction: column; }
+    .adminProductVariantActions .adminButton, .adminCombinationGroupHead .adminButton { min-height: 44px; }
     .adminProductVariantHead { flex-wrap: wrap; }
     .adminProductVariantToggle { min-width: calc(100% - 50px); }
     .adminProductMediaItem { grid-template-columns: 1fr; }

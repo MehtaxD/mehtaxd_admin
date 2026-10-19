@@ -63,6 +63,13 @@ function date(value: string | null) {
   }).format(new Date(value));
 }
 
+function optionEntries(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  return Object.entries(value).filter(
+    (entry): entry is [string, string] => typeof entry[1] === "string",
+  );
+}
+
 function mediaUrl(value: string) {
   try {
     if (/^https?:\/\//i.test(value)) return value;
@@ -91,7 +98,9 @@ function eventText(event: OrderEvent) {
 }
 
 export function isNearChatBottom(element: HTMLElement, threshold = 72) {
-  return element.scrollHeight - element.scrollTop - element.clientHeight <= threshold;
+  return (
+    element.scrollHeight - element.scrollTop - element.clientHeight <= threshold
+  );
 }
 
 export default function AdminOrderDetailPage() {
@@ -123,7 +132,9 @@ export default function AdminOrderDetailPage() {
   const [connectionRestored, setConnectionRestored] = useState(false);
   const chatViewportRef = useRef<HTMLOListElement>(null);
   const followNewestRef = useRef(true);
-  const previousConnectionRef = useRef<"connecting" | "connected" | "reconnecting" | "unauthorized" | "unavailable">("connecting");
+  const previousConnectionRef = useRef<
+    "connecting" | "connected" | "reconnecting" | "unauthorized" | "unavailable"
+  >("connecting");
 
   const legalOrderTransitions = useMemo(() => {
     if (!order) return [];
@@ -493,7 +504,10 @@ export default function AdminOrderDetailPage() {
         </div>
       ) : null}
 
-      <section className="adminOrderChatWorkspace" aria-labelledby="admin-order-chat-heading">
+      <section
+        className="adminOrderChatWorkspace"
+        aria-labelledby="admin-order-chat-heading"
+      >
         <div className="adminOrderChatPanel">
           <div className="adminOrderChatHead">
             <div>
@@ -502,15 +516,28 @@ export default function AdminOrderDetailPage() {
             </div>
             <div className="adminChatHeadActions">
               {connectionState === "connecting" ? (
-                <span className="adminChatConnection" role="status">Connecting…</span>
+                <span className="adminChatConnection" role="status">
+                  Connecting…
+                </span>
               ) : connectionState === "reconnecting" ? (
-                <span className="adminChatConnection reconnecting" role="status">Reconnecting…</span>
+                <span
+                  className="adminChatConnection reconnecting"
+                  role="status"
+                >
+                  Reconnecting…
+                </span>
               ) : connectionState === "unauthorized" ? (
-                <span className="adminChatConnection unavailable" role="alert">Chat authorization expired. Refresh this Order.</span>
+                <span className="adminChatConnection unavailable" role="alert">
+                  Chat authorization expired. Refresh this Order.
+                </span>
               ) : connectionState === "unavailable" ? (
-                <span className="adminChatConnection unavailable" role="alert">Order Chat is unavailable. Refresh this Order to retry.</span>
+                <span className="adminChatConnection unavailable" role="alert">
+                  Order Chat is unavailable. Refresh this Order to retry.
+                </span>
               ) : connectionRestored ? (
-                <span className="adminChatConnection restored" role="status">Connection restored</span>
+                <span className="adminChatConnection restored" role="status">
+                  Connection restored
+                </span>
               ) : null}
               <button
                 className="adminButton adminChatRefresh"
@@ -524,12 +551,16 @@ export default function AdminOrderDetailPage() {
           </div>
 
           <div className="adminSensitiveNotice adminChatSafety">
-            Never request passwords, 2FA codes, card details, or account credentials.
+            Never request passwords, 2FA codes, card details, or account
+            credentials.
           </div>
 
           <div className="adminChatViewportShell">
             {communicationLoading && messages.length === 0 ? (
-              <div className="adminChatLoading" role="status"><Loader2 className="adminSpinner" size={18} /> Loading conversation…</div>
+              <div className="adminChatLoading" role="status">
+                <Loader2 className="adminSpinner" size={18} /> Loading
+                conversation…
+              </div>
             ) : null}
             <ol
               className="adminChatMessages adminChatViewport"
@@ -537,15 +568,23 @@ export default function AdminOrderDetailPage() {
               onScroll={handleChatScroll}
             >
               {messages.length === 0 && !communicationLoading ? (
-                <li className="empty">No messages yet. Start with a clear order update.</li>
+                <li className="empty">
+                  No messages yet. Start with a clear order update.
+                </li>
               ) : (
                 messages.map((message) => (
                   <li
-                    className={message.senderType === "admin" ? "staff" : "customer"}
+                    className={
+                      message.senderType === "admin" ? "staff" : "customer"
+                    }
                     key={message.id}
                   >
                     <div className="adminMessageMeta">
-                      <strong>{message.senderType === "admin" ? "MehtaXD" : message.senderLabel}</strong>
+                      <strong>
+                        {message.senderType === "admin"
+                          ? "MehtaXD"
+                          : message.senderLabel}
+                      </strong>
                       <time>{date(message.createdAt)}</time>
                     </div>
                     <p>{message.body}</p>
@@ -556,9 +595,15 @@ export default function AdminOrderDetailPage() {
                         title={message.receiptLabel}
                       >
                         <span className="adminReceiptTicks" aria-hidden="true">
-                          {message.pending ? "…" : message.receiptStatus === "sent" ? "✓" : "✓✓"}
+                          {message.pending
+                            ? "…"
+                            : message.receiptStatus === "sent"
+                              ? "✓"
+                              : "✓✓"}
                         </span>
-                        <span>{message.pending ? "Sending" : message.receiptLabel}</span>
+                        <span>
+                          {message.pending ? "Sending" : message.receiptLabel}
+                        </span>
                       </span>
                     ) : null}
                   </li>
@@ -566,14 +611,20 @@ export default function AdminOrderDetailPage() {
               )}
             </ol>
             {showNewest ? (
-              <button className="adminChatJump" type="button" onClick={() => scrollToNewest()}>
+              <button
+                className="adminChatJump"
+                type="button"
+                onClick={() => scrollToNewest()}
+              >
                 <ChevronDown size={15} /> Jump to newest
               </button>
             ) : null}
           </div>
 
           <div className="adminChatComposer">
-            <label className="srOnly" htmlFor="admin-chat-body">Reply to customer</label>
+            <label className="srOnly" htmlFor="admin-chat-body">
+              Reply to customer
+            </label>
             <textarea
               id="admin-chat-body"
               value={chatBody}
@@ -581,7 +632,11 @@ export default function AdminOrderDetailPage() {
               maxLength={4000}
               onChange={(event) => setChatBody(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing
+                ) {
                   event.preventDefault();
                   if (chatBody.trim() && !mutating) void sendAdminMessage();
                 }
@@ -599,23 +654,56 @@ export default function AdminOrderDetailPage() {
           </div>
         </div>
 
-        <aside className="adminOrderSupportContext" aria-label="Order support context">
+        <aside
+          className="adminOrderSupportContext"
+          aria-label="Order support context"
+        >
           <div className="adminSupportCustomer">
             <span>Customer</span>
             <strong>{order.customerName || "Name not provided"}</strong>
             <a href={`mailto:${order.customerEmail}`}>{order.customerEmail}</a>
           </div>
           <dl>
-            <div><dt>Order</dt><dd>{order.orderNumber}</dd></div>
-            <div><dt>Total</dt><dd>{money(order.totalMinor, order.currency)} {order.currency}</dd></div>
-            <div><dt>Order status</dt><dd>{badge(order.orderStatus)}</dd></div>
-            <div><dt>Payment</dt><dd>{latestPayment ? badge(latestPayment.status) : "No attempt"}</dd></div>
-            <div><dt>Fulfillment</dt><dd>{badge(order.fulfillmentStatus)}</dd></div>
-            <div><dt>Created</dt><dd>{date(order.createdAt)}</dd></div>
-            <div><dt>Paid</dt><dd>{date(order.paidAt)}</dd></div>
+            <div>
+              <dt>Order</dt>
+              <dd>{order.orderNumber}</dd>
+            </div>
+            <div>
+              <dt>Total</dt>
+              <dd>
+                {money(order.totalMinor, order.currency)} {order.currency}
+              </dd>
+            </div>
+            <div>
+              <dt>Order status</dt>
+              <dd>{badge(order.orderStatus)}</dd>
+            </div>
+            <div>
+              <dt>Payment</dt>
+              <dd>
+                {latestPayment ? badge(latestPayment.status) : "No attempt"}
+              </dd>
+            </div>
+            <div>
+              <dt>Fulfillment</dt>
+              <dd>{badge(order.fulfillmentStatus)}</dd>
+            </div>
+            <div>
+              <dt>Created</dt>
+              <dd>{date(order.createdAt)}</dd>
+            </div>
+            <div>
+              <dt>Paid</dt>
+              <dd>{date(order.paidAt)}</dd>
+            </div>
           </dl>
           {order.customerId ? (
-            <Link className="adminTextLink" href={`/admin/customers/${order.customerId}`}>Open customer record →</Link>
+            <Link
+              className="adminTextLink"
+              href={`/admin/customers/${order.customerId}`}
+            >
+              Open customer record →
+            </Link>
           ) : null}
         </aside>
       </section>
@@ -931,6 +1019,23 @@ export default function AdminOrderDetailPage() {
                       .join(" / ") || item.productType}
                   </span>
                   <h3>{item.productName}</h3>
+                  {item.variantLabel && item.variantLabel !== "Default" ? (
+                    <p>
+                      <strong>Variant:</strong> {item.variantLabel}
+                    </p>
+                  ) : null}
+                  {optionEntries(item.selectedOptions).length ? (
+                    <dl className="adminOrderItemOptions">
+                      {optionEntries(item.selectedOptions).map(
+                        ([name, value]) => (
+                          <div key={name}>
+                            <dt>{name}</dt>
+                            <dd>{value}</dd>
+                          </div>
+                        ),
+                      )}
+                    </dl>
+                  ) : null}
                   <p>
                     {item.deliveryInformation || "No delivery note stored."}
                   </p>

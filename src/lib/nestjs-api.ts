@@ -1,7 +1,12 @@
 import { safeAdminErrorFromPayload } from "@/lib/safe-api-error";
 
 export class AdminFieldError extends Error {
-  constructor(message: string, readonly fields: Record<string, string>) { super(message); }
+  constructor(
+    message: string,
+    readonly fields: Record<string, string>,
+  ) {
+    super(message);
+  }
 }
 
 async function request<T>(
@@ -18,7 +23,9 @@ async function request<T>(
       credentials: "same-origin",
     });
   } catch {
-    throw new Error("The Admin service could not be reached. Check your connection and try again.");
+    throw new Error(
+      "The Admin service could not be reached. Check your connection and try again.",
+    );
   }
 
   if (response.status === 401 && typeof window !== "undefined")
@@ -31,7 +38,10 @@ async function request<T>(
       errorData = JSON.parse(errorText);
     } catch {}
     const safe = safeAdminErrorFromPayload(response.status, errorData);
-    const fields = errorData && typeof errorData === "object" ? Reflect.get(errorData, "fields") : null;
+    const fields =
+      errorData && typeof errorData === "object"
+        ? Reflect.get(errorData, "fields")
+        : null;
     if (fields && typeof fields === "object" && !Array.isArray(fields))
       throw new AdminFieldError(safe.message, fields as Record<string, string>);
     throw new Error(safe.message);
@@ -51,7 +61,9 @@ async function download(endpoint: string, fallbackFilename: string) {
       credentials: "same-origin",
     });
   } catch {
-    throw new Error("The evidence PDF could not be reached. Check your connection and try again.");
+    throw new Error(
+      "The evidence PDF could not be reached. Check your connection and try again.",
+    );
   }
   if (response.status === 401 && typeof window !== "undefined")
     window.location.href = "/admin/login";
@@ -61,7 +73,13 @@ async function download(endpoint: string, fallbackFilename: string) {
     try {
       payload = JSON.parse(body);
     } catch {}
-    throw new Error(safeAdminErrorFromPayload(response.status, payload, "The evidence PDF is not available for this delivery.").message);
+    throw new Error(
+      safeAdminErrorFromPayload(
+        response.status,
+        payload,
+        "The evidence PDF is not available for this delivery.",
+      ).message,
+    );
   }
   if (!response.headers.get("content-type")?.includes("application/pdf")) {
     throw new Error("The evidence PDF response was invalid.");
@@ -86,13 +104,21 @@ async function adminLogin(email: string, password: string) {
       body: JSON.stringify({ email, password }),
     });
   } catch {
-    throw new Error("Authentication is temporarily unavailable. Check your connection and try again.");
+    throw new Error(
+      "Authentication is temporarily unavailable. Check your connection and try again.",
+    );
   }
   const payload: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     if (response.status === 400 || response.status === 401)
       throw new Error("Invalid email or password.");
-    throw new Error(safeAdminErrorFromPayload(response.status, payload, "Admin sign-in couldn’t be completed. Try again.").message);
+    throw new Error(
+      safeAdminErrorFromPayload(
+        response.status,
+        payload,
+        "Admin sign-in couldn’t be completed. Try again.",
+      ).message,
+    );
   }
   return payload as { user: { id: string; email: string; role: string } };
 }
@@ -118,20 +144,36 @@ export const nestjsApi = {
   },
 
   games: {
-    uploadMedia: async (kind: "icon" | "banner" | "og", file: File): Promise<{ url: string }> => {
+    uploadMedia: async (
+      kind: "icon" | "banner" | "og",
+      file: File,
+    ): Promise<{ url: string }> => {
       const body = new FormData();
       body.set("kind", kind);
       body.set("file", file);
       let response: Response;
       try {
-        response = await fetch("/api/admin/game-media", { method: "POST", credentials: "same-origin", body });
+        response = await fetch("/api/admin/game-media", {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+        });
       } catch {
-        throw new Error("Image upload could not be reached. Check your connection and try again.");
+        throw new Error(
+          "Image upload could not be reached. Check your connection and try again.",
+        );
       }
-      if (response.status === 401 && typeof window !== "undefined") window.location.href = "/admin/login";
+      if (response.status === 401 && typeof window !== "undefined")
+        window.location.href = "/admin/login";
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(safeAdminErrorFromPayload(response.status, payload, "Image upload failed. Try again.").message);
+        throw new Error(
+          safeAdminErrorFromPayload(
+            response.status,
+            payload,
+            "Image upload failed. Try again.",
+          ).message,
+        );
       }
       return response.json();
     },
@@ -203,14 +245,27 @@ export const nestjsApi = {
       body.set("file", file);
       let response: Response;
       try {
-        response = await fetch("/api/admin/product-media", { method: "POST", credentials: "same-origin", body });
+        response = await fetch("/api/admin/product-media", {
+          method: "POST",
+          credentials: "same-origin",
+          body,
+        });
       } catch {
-        throw new Error("Image upload could not be reached. Check your connection and try again.");
+        throw new Error(
+          "Image upload could not be reached. Check your connection and try again.",
+        );
       }
-      if (response.status === 401 && typeof window !== "undefined") window.location.href = "/admin/login";
+      if (response.status === 401 && typeof window !== "undefined")
+        window.location.href = "/admin/login";
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
-        throw new Error(safeAdminErrorFromPayload(response.status, payload, "Image upload failed. Try again.").message);
+        throw new Error(
+          safeAdminErrorFromPayload(
+            response.status,
+            payload,
+            "Image upload failed. Try again.",
+          ).message,
+        );
       }
       return response.json();
     },
@@ -262,7 +317,13 @@ export const nestjsApi = {
       if (params?.q) query.set("q", params.q);
       if (params?.page) query.set("page", String(params.page));
       if (params?.limit) query.set("limit", String(params.limit));
-      return request<{ items: PaymentAssignmentTarget[]; page: number; limit: number; hasMore: boolean; query: string }>(`/admin/payment-profiles/products${query.size ? `?${query}` : ""}`);
+      return request<{
+        items: PaymentAssignmentTarget[];
+        page: number;
+        limit: number;
+        hasMore: boolean;
+        query: string;
+      }>(`/admin/payment-profiles/products${query.size ? `?${query}` : ""}`);
     },
     create: (data: PaymentProfileInput) =>
       request<PaymentProfile>("/admin/payment-profiles", {
@@ -728,6 +789,8 @@ export interface AdminPaymentEvent {
 export interface OrderItem {
   id: string;
   productId: string | null;
+  variantId: string | null;
+  variantLabel: string | null;
   productName: string;
   productSlug: string;
   gameName: string | null;
@@ -1137,8 +1200,19 @@ export interface Product {
     compareAtPrice: string | null;
     isActive: boolean;
     sortOrder: number;
+    optionValueIds: string[];
   }>;
-  images: Array<{ imageUrl: string; altText: string | null; sortOrder: number }>;
+  optionGroups: Array<{
+    id: string;
+    name: string;
+    sortOrder: number;
+    values: Array<{ id: string; label: string; sortOrder: number }>;
+  }>;
+  images: Array<{
+    imageUrl: string;
+    altText: string | null;
+    sortOrder: number;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -1165,6 +1239,12 @@ export interface CreateProductDto {
     price: number;
     compareAtPrice?: number;
     isActive: boolean;
+    optionValueIds?: string[];
+  }>;
+  optionGroups?: Array<{
+    id: string;
+    name: string;
+    values: Array<{ id: string; label: string }>;
   }>;
   images?: Array<{ imageUrl: string; altText?: string }>;
   currency?: string;

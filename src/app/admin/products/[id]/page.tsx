@@ -4,17 +4,45 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2 } from "@/components/icons";
-import { AdminFieldError, nestjsApi, Product, Game, Category, UpdateProductDto, CreateProductForGameDto } from "@/lib/nestjs-api";
-import { ProductVariantsEditor, newVariant, type VariantForm } from "@/components/product-variants-editor";
-import { ProductMediaEditor, type ProductImageForm } from "@/components/product-media-editor";
+import {
+  AdminFieldError,
+  nestjsApi,
+  Product,
+  Game,
+  Category,
+  UpdateProductDto,
+  CreateProductForGameDto,
+} from "@/lib/nestjs-api";
+import {
+  ProductVariantsEditor,
+  newVariant,
+  type VariantForm,
+} from "@/components/product-variants-editor";
+import {
+  ProductOptionsEditor,
+  type OptionGroupForm,
+} from "@/components/product-options-editor";
+import {
+  ProductMediaEditor,
+  type ProductImageForm,
+} from "@/components/product-media-editor";
 import { finalizeSlug, normalizeSlugDraft } from "@/lib/slug-input";
+import { formatPriceDraft, parsePriceDraft } from "@/lib/price-input";
+import { BlogEditor } from "@/components/blog/blog-editor";
 
 type ProductFormData = {
   gameId: string;
   categoryId: string;
   name: string;
   slug: string;
-  productType: "currency" | "account" | "item" | "boosting" | "service" | "subscription" | "other";
+  productType:
+    | "currency"
+    | "account"
+    | "item"
+    | "boosting"
+    | "service"
+    | "subscription"
+    | "other";
   price: number;
   compareAtPrice: number;
   currency: string;
@@ -75,7 +103,10 @@ export default function ProductEditorPage() {
   const slugTouched = useRef(isEditing);
 
   const [form, setForm] = useState<ProductFormData>(empty);
-  const [variants, setVariants] = useState<VariantForm[]>([newVariant("Default", "initial")]);
+  const [variants, setVariants] = useState<VariantForm[]>([
+    newVariant("Default", "initial"),
+  ]);
+  const [optionGroups, setOptionGroups] = useState<OptionGroupForm[]>([]);
   const [images, setImages] = useState<ProductImageForm[]>([]);
   const [pendingUploads, setPendingUploads] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -84,7 +115,9 @@ export default function ProductEditorPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEditing);
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [messageType, setMessageType] = useState<"success" | "error">(
+    "success",
+  );
   const [gamesError, setGamesError] = useState(false);
   const [categoriesError, setCategoriesError] = useState(false);
 
@@ -104,7 +137,10 @@ export default function ProductEditorPage() {
   async function loadGames() {
     setGamesError(false);
     try {
-      const response = await nestjsApi.games.list({ limit: 100, status: "published" });
+      const response = await nestjsApi.games.list({
+        limit: 100,
+        status: "published",
+      });
       setGames(response);
     } catch {
       setGames([]);
@@ -115,7 +151,10 @@ export default function ProductEditorPage() {
   async function loadCategories() {
     setCategoriesError(false);
     try {
-      const response = await nestjsApi.categories.list({ limit: 100, gameId: form.gameId });
+      const response = await nestjsApi.categories.list({
+        limit: 100,
+        gameId: form.gameId,
+      });
       setCategories(response);
     } catch {
       setCategories([]);
@@ -133,7 +172,9 @@ export default function ProductEditorPage() {
         slug: product.slug,
         productType: product.productType,
         price: Number(product.price),
-        compareAtPrice: product.compareAtPrice ? Number(product.compareAtPrice) : 0,
+        compareAtPrice: product.compareAtPrice
+          ? Number(product.compareAtPrice)
+          : 0,
         currency: product.currency,
         status: product.status as ProductFormData["status"],
         isActive: product.isActive,
@@ -150,16 +191,34 @@ export default function ProductEditorPage() {
         canonicalUrl: product.canonicalUrl ?? "",
       };
       setForm(productData);
-      setVariants(product.variants.length
-        ? product.variants.map((variant) => ({
-            key: variant.id, id: variant.id, label: variant.label,
-            description: variant.description ?? "", price: Number(variant.price),
-            compareAtPrice: Number(variant.compareAtPrice ?? 0), isActive: variant.isActive,
-          }))
-        : [{ ...newVariant("Default", "legacy-default"), price: Number(product.price), compareAtPrice: Number(product.compareAtPrice ?? 0) }]);
-      setImages(product.images.map((image, index) => ({
-        key: `saved-${index}`, imageUrl: image.imageUrl, altText: image.altText ?? "",
-      })));
+      setVariants(
+        product.variants.length
+          ? product.variants.map((variant) => ({
+              key: variant.id,
+              id: variant.id,
+              label: variant.label,
+              description: variant.description ?? "",
+              price: formatPriceDraft(variant.price),
+              compareAtPrice: formatPriceDraft(variant.compareAtPrice),
+              isActive: variant.isActive,
+              optionValueIds: variant.optionValueIds ?? [],
+            }))
+          : [
+              {
+                ...newVariant("Default", "legacy-default"),
+                price: formatPriceDraft(product.price),
+                compareAtPrice: formatPriceDraft(product.compareAtPrice),
+              },
+            ],
+      );
+      setOptionGroups(product.optionGroups ?? []);
+      setImages(
+        product.images.map((image, index) => ({
+          key: `saved-${index}`,
+          imageUrl: image.imageUrl,
+          altText: image.altText ?? "",
+        })),
+      );
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to load product");
       setMessageType("error");
@@ -168,7 +227,10 @@ export default function ProductEditorPage() {
     }
   }
 
-  function set<K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) {
+  function set<K extends keyof ProductFormData>(
+    key: K,
+    value: ProductFormData[K],
+  ) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -199,11 +261,70 @@ export default function ProductEditorPage() {
     if (!form.categoryId) localErrors.categoryId = "Choose a Category.";
     if (!form.name.trim()) localErrors.name = "Enter a Product name.";
     if (!variants.length) localErrors.variants = "Add at least one option.";
-    variants.forEach((variant, index) => {
-      if (!variant.label.trim()) localErrors[`variants.${index}.label`] = "Enter an option name.";
-      if (!Number.isFinite(variant.price) || variant.price < 0) localErrors[`variants.${index}.price`] = "Enter a valid price.";
+    const structured = optionGroups.length > 0;
+    const seenGroupNames = new Set<string>();
+    const valueToGroup = new Map<string, string>();
+    optionGroups.forEach((group, groupIndex) => {
+      const groupName = group.name.trim().toLocaleLowerCase();
+      if (!groupName)
+        localErrors[`optionGroups.${groupIndex}.name`] = "Enter a group name.";
+      else if (seenGroupNames.has(groupName))
+        localErrors[`optionGroups.${groupIndex}.name`] =
+          "Group names must be unique.";
+      seenGroupNames.add(groupName);
+      if (!group.values.length)
+        localErrors.optionGroups =
+          "Each option group needs at least one value.";
+      const seenLabels = new Set<string>();
+      group.values.forEach((value, valueIndex) => {
+        const label = value.label.trim().toLocaleLowerCase();
+        if (!label)
+          localErrors[`optionGroups.${groupIndex}.values.${valueIndex}.label`] =
+            "Enter a value.";
+        else if (seenLabels.has(label))
+          localErrors[`optionGroups.${groupIndex}.values.${valueIndex}.label`] =
+            "Values must be unique within a group.";
+        seenLabels.add(label);
+        valueToGroup.set(value.id, group.id);
+      });
     });
-    if (form.status === "published" && form.isActive && !variants.some((variant) => variant.isActive))
+    const seenCombinations = new Set<string>();
+    variants.forEach((variant, index) => {
+      if (!structured && !variant.label.trim())
+        localErrors[`variants.${index}.label`] = "Enter an option name.";
+      const price = parsePriceDraft(variant.price);
+      const compareAtPrice = parsePriceDraft(variant.compareAtPrice, true);
+      if (!price.ok)
+        localErrors[`variants.${index}.price`] = "Enter a valid price.";
+      if (!compareAtPrice.ok)
+        localErrors[`variants.${index}.compareAtPrice`] =
+          "Enter a valid compare-at price or leave it blank.";
+      if (structured) {
+        const selectedByGroup = optionGroups.map((group) =>
+          variant.optionValueIds.filter(
+            (id) => valueToGroup.get(id) === group.id,
+          ),
+        );
+        if (
+          selectedByGroup.some((ids) => ids.length !== 1) ||
+          variant.optionValueIds.some((id) => !valueToGroup.has(id))
+        ) {
+          localErrors[`variants.${index}.optionValueIds`] =
+            "Choose exactly one value from every group.";
+        } else {
+          const signature = selectedByGroup.flat().join(":");
+          if (seenCombinations.has(signature))
+            localErrors[`variants.${index}.optionValueIds`] =
+              "This combination already exists.";
+          seenCombinations.add(signature);
+        }
+      }
+    });
+    if (
+      form.status === "published" &&
+      form.isActive &&
+      !variants.some((variant) => variant.isActive)
+    )
       localErrors.variants = "A published Product needs an active option.";
     for (const key of ["ogImageUrl", "canonicalUrl"] as const) {
       const value = form[key].trim();
@@ -221,30 +342,77 @@ export default function ProductEditorPage() {
 
     try {
       const { gameId, ...formFields } = form;
-      const listing = [...variants].filter((variant) => variant.isActive).sort((a, b) => a.price - b.price)[0]
-        ?? [...variants].sort((a, b) => a.price - b.price)[0];
+      const parsedVariants = variants.map((variant) => {
+        const price = parsePriceDraft(variant.price);
+        const compareAtPrice = parsePriceDraft(variant.compareAtPrice, true);
+        if (!price.ok || price.value === undefined || !compareAtPrice.ok) {
+          throw new Error("Review the variant prices and try again.");
+        }
+        return {
+          ...variant,
+          price: price.value,
+          compareAtPrice: compareAtPrice.value,
+        };
+      });
+      const listing =
+        [...parsedVariants]
+          .filter((variant) => variant.isActive)
+          .sort((a, b) => a.price - b.price)[0] ??
+        [...parsedVariants].sort((a, b) => a.price - b.price)[0];
       const payload = {
         ...formFields,
         slug: finalizeSlug(form.slug || form.name),
         price: listing.price,
-        compareAtPrice: listing.compareAtPrice || undefined,
-        variants: variants.map((variant) => ({
+        compareAtPrice: listing.compareAtPrice,
+        variants: parsedVariants.map((variant) => ({
           ...(variant.id ? { id: variant.id } : {}),
-          label: variant.label.trim(), description: variant.description.trim(), price: variant.price,
-          ...(variant.compareAtPrice ? { compareAtPrice: variant.compareAtPrice } : {}),
+          label: structured
+            ? optionGroups
+                .map((group) =>
+                  group.values
+                    .find((value) => variant.optionValueIds.includes(value.id))
+                    ?.label.trim(),
+                )
+                .filter(Boolean)
+                .join(" + ")
+            : variant.label.trim(),
+          description: variant.description.trim(),
+          price: variant.price,
+          ...(variant.compareAtPrice !== undefined
+            ? { compareAtPrice: variant.compareAtPrice }
+            : {}),
           isActive: variant.isActive,
+          optionValueIds: variant.optionValueIds,
         })),
-        images: images.map((image) => ({ imageUrl: image.imageUrl, altText: image.altText.trim() })),
+        optionGroups: optionGroups.map((group) => ({
+          id: group.id,
+          name: group.name.trim(),
+          values: group.values.map((value) => ({
+            id: value.id,
+            label: value.label.trim(),
+          })),
+        })),
+        images: images.map((image) => ({
+          imageUrl: image.imageUrl,
+          altText: image.altText.trim(),
+        })),
         ogImageUrl: form.ogImageUrl.trim() || (isEditing ? null : undefined),
-        canonicalUrl: form.canonicalUrl.trim() || (isEditing ? null : undefined),
+        canonicalUrl:
+          form.canonicalUrl.trim() || (isEditing ? null : undefined),
         currency: "USD",
       };
 
       let result: Product;
       if (isEditing) {
-        result = await nestjsApi.products.update(productId, payload as UpdateProductDto);
+        result = await nestjsApi.products.update(
+          productId,
+          payload as UpdateProductDto,
+        );
       } else {
-        result = await nestjsApi.products.createForGame(gameId, payload as CreateProductForGameDto);
+        result = await nestjsApi.products.createForGame(
+          gameId,
+          payload as CreateProductForGameDto,
+        );
       }
 
       setMessage(`Saved product "${result.name}"`);
@@ -253,7 +421,9 @@ export default function ProductEditorPage() {
       router.refresh();
     } catch (error) {
       if (error instanceof AdminFieldError) setFieldErrors(error.fields);
-      setMessage(error instanceof Error ? error.message : "Could not save product");
+      setMessage(
+        error instanceof Error ? error.message : "Could not save product",
+      );
       setMessageType("error");
     } finally {
       setSaving(false);
@@ -262,7 +432,10 @@ export default function ProductEditorPage() {
 
   if (loading) {
     return (
-      <div className="adminForm" style={{ minHeight: 300, display: "grid", placeItems: "center" }}>
+      <div
+        className="adminForm"
+        style={{ minHeight: 300, display: "grid", placeItems: "center" }}
+      >
         <Loader2 className="adminSpinner" size={32} />
       </div>
     );
@@ -274,45 +447,103 @@ export default function ProductEditorPage() {
         <div>
           <div className="adminEyebrow">Catalog · Products</div>
           <h1>{isEditing ? "Edit product" : "Create new product"}</h1>
-          <p>Choose the game and category, then set the options customers can buy.</p>
+          <p>
+            Choose the game and category, then set the options customers can
+            buy.
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Link className="adminButton" href="/admin/products">Cancel</Link>
-          <button className="adminButton primary" disabled={saving || pendingUploads > 0} type="submit">
+          <Link className="adminButton" href="/admin/products">
+            Cancel
+          </Link>
+          <button
+            className="adminButton primary"
+            disabled={saving || pendingUploads > 0}
+            type="submit"
+          >
             {saving ? <Loader2 size={16} /> : "Save product"}
           </button>
         </div>
       </div>
 
-      {message && <div role={messageType === "error" ? "alert" : "status"} className={messageType === "success" ? "adminSuccess" : "adminNotice"}>{message}</div>}
-      {gamesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Games couldn’t load, so this product cannot be assigned safely.</span><button type="button" className="adminButton" onClick={() => void loadGames()}>Try again</button></div> : null}
-      {categoriesError ? <div className="adminNotice adminInlineFeedback" role="alert"><span>Categories couldn’t load for the selected game.</span><button type="button" className="adminButton" onClick={() => void loadCategories()}>Try again</button></div> : null}
+      {message && (
+        <div
+          role={messageType === "error" ? "alert" : "status"}
+          className={messageType === "success" ? "adminSuccess" : "adminNotice"}
+        >
+          {message}
+        </div>
+      )}
+      {gamesError ? (
+        <div className="adminNotice adminInlineFeedback" role="alert">
+          <span>
+            Games couldn’t load, so this product cannot be assigned safely.
+          </span>
+          <button
+            type="button"
+            className="adminButton"
+            onClick={() => void loadGames()}
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+      {categoriesError ? (
+        <div className="adminNotice adminInlineFeedback" role="alert">
+          <span>Categories couldn’t load for the selected game.</span>
+          <button
+            type="button"
+            className="adminButton"
+            onClick={() => void loadCategories()}
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
 
       <section className="adminSection">
         <h2>General</h2>
         <div className="adminFormGrid">
           <div className="adminField">
-            <label>Game <span style={{ color: "#e6002d" }}>*</span></label>
+            <label>
+              Game <span style={{ color: "#e6002d" }}>*</span>
+            </label>
             <select
               value={form.gameId}
               onChange={(e) => {
                 setCategories([]);
-                setForm((current) => ({ ...current, gameId: e.target.value, categoryId: "" }));
+                setForm((current) => ({
+                  ...current,
+                  gameId: e.target.value,
+                  categoryId: "",
+                }));
               }}
               required
               disabled={isEditing || gamesError}
             >
               <option value="">Select a game</option>
               {games.map((game) => (
-                <option key={game.id} value={game.id}>{game.name}</option>
+                <option key={game.id} value={game.id}>
+                  {game.name}
+                </option>
               ))}
             </select>
-            {fieldErrors.gameId ? <small className="adminFieldError" role="alert">{fieldErrors.gameId}</small> : null}
-            {isEditing && <span className="adminHint">Game cannot be changed after creation.</span>}
+            {fieldErrors.gameId ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.gameId}
+              </small>
+            ) : null}
+            {isEditing && (
+              <span className="adminHint">
+                Game cannot be changed after creation.
+              </span>
+            )}
           </div>
 
           <div className="adminField">
-            <label>Category <span style={{ color: "#e6002d" }}>*</span></label>
+            <label>
+              Category <span style={{ color: "#e6002d" }}>*</span>
+            </label>
             <select
               value={form.categoryId}
               onChange={(e) => set("categoryId", e.target.value)}
@@ -321,41 +552,105 @@ export default function ProductEditorPage() {
             >
               <option value="">Select a category</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
               ))}
             </select>
-            {fieldErrors.categoryId ? <small className="adminFieldError" role="alert">{fieldErrors.categoryId}</small> : null}
-            {!form.gameId && <span className="adminHint">Select a game first.</span>}
+            {fieldErrors.categoryId ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.categoryId}
+              </small>
+            ) : null}
+            {!form.gameId && (
+              <span className="adminHint">Select a game first.</span>
+            )}
           </div>
 
           <div className="adminField">
-            <label>Product type <span style={{ color: "#e6002d" }}>*</span></label>
-            <select value={form.productType} onChange={(e) => set("productType", e.target.value as ProductFormData["productType"])} required>
+            <label>
+              Product type <span style={{ color: "#e6002d" }}>*</span>
+            </label>
+            <select
+              value={form.productType}
+              onChange={(e) =>
+                set(
+                  "productType",
+                  e.target.value as ProductFormData["productType"],
+                )
+              }
+              required
+            >
               {PRODUCT_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
               ))}
             </select>
-            {fieldErrors.productType ? <small className="adminFieldError" role="alert">{fieldErrors.productType}</small> : null}
+            {fieldErrors.productType ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.productType}
+              </small>
+            ) : null}
           </div>
 
           <div className="adminField">
-            <label>Name <span style={{ color: "#e6002d" }}>*</span></label>
-            <input value={form.name} onChange={(e) => changeName(e.target.value)} placeholder="8 Ball Pool Coins" required />
-            {fieldErrors.name ? <small className="adminFieldError" role="alert">{fieldErrors.name}</small> : null}
+            <label>
+              Name <span style={{ color: "#e6002d" }}>*</span>
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => changeName(e.target.value)}
+              placeholder="8 Ball Pool Coins"
+              required
+            />
+            {fieldErrors.name ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.name}
+              </small>
+            ) : null}
           </div>
 
           <div className="adminField">
             <label>Slug</label>
-            <input value={form.slug} onChange={(e) => changeSlug(e.target.value)} onBlur={finishSlug} placeholder="fc-25-coins-100m" />
-            {fieldErrors.slug ? <small className="adminFieldError" role="alert">{fieldErrors.slug}</small> : null}
-            <span className="adminHint">Leave blank to generate from name.</span>
+            <input
+              value={form.slug}
+              onChange={(e) => changeSlug(e.target.value)}
+              onBlur={finishSlug}
+              placeholder="fc-25-coins-100m"
+            />
+            {fieldErrors.slug ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.slug}
+              </small>
+            ) : null}
+            <span className="adminHint">
+              Leave blank to generate from name.
+            </span>
           </div>
         </div>
       </section>
 
       <section className="adminSection">
+        <h2>Options</h2>
+        <ProductOptionsEditor
+          groups={optionGroups}
+          onChange={setOptionGroups}
+          referencedValueIds={
+            new Set(variants.flatMap((variant) => variant.optionValueIds))
+          }
+          errors={fieldErrors}
+        />
+      </section>
+
+      <section className="adminSection">
         <h2>Variants</h2>
-        <ProductVariantsEditor variants={variants} onChange={setVariants} errors={fieldErrors} />
+        <ProductVariantsEditor
+          variants={variants}
+          optionGroups={optionGroups}
+          onChange={setVariants}
+          errors={fieldErrors}
+        />
       </section>
 
       <section className="adminSection">
@@ -363,19 +658,36 @@ export default function ProductEditorPage() {
         <div className="adminFormGrid">
           <div className="adminField full">
             <label>Requirements</label>
-            <textarea value={form.requirements} onChange={(e) => set("requirements", e.target.value)} placeholder="Describe what the customer needs before delivery." rows={4} />
+            <textarea
+              value={form.requirements}
+              onChange={(e) => set("requirements", e.target.value)}
+              placeholder="Describe what the customer needs before delivery."
+              rows={4}
+            />
           </div>
 
           <div className="adminField full">
             <label>Delivery information</label>
-            <textarea value={form.deliveryInformation} onChange={(e) => set("deliveryInformation", e.target.value)} placeholder="Describe the actual delivery process and timing." rows={3} />
+            <textarea
+              value={form.deliveryInformation}
+              onChange={(e) => set("deliveryInformation", e.target.value)}
+              placeholder="Describe the actual delivery process and timing."
+              rows={3}
+            />
           </div>
         </div>
       </section>
 
       <section className="adminSection">
         <h2>Media</h2>
-        <ProductMediaEditor images={images} onChange={setImages} onUploadStateChange={(delta) => setPendingUploads((count) => count + delta)} productName={form.name} />
+        <ProductMediaEditor
+          images={images}
+          onChange={setImages}
+          onUploadStateChange={(delta) =>
+            setPendingUploads((count) => count + delta)
+          }
+          productName={form.name}
+        />
       </section>
 
       <section className="adminSection">
@@ -383,20 +695,60 @@ export default function ProductEditorPage() {
         <div className="adminFormGrid">
           <div className="adminField full">
             <label>Short description</label>
-            <textarea value={form.shortDescription} onChange={(e) => set("shortDescription", e.target.value)} rows={2} placeholder="A concise summary for product listings" />
+            <textarea
+              value={form.shortDescription}
+              onChange={(e) => set("shortDescription", e.target.value)}
+              rows={2}
+              placeholder="A concise summary for product listings"
+            />
           </div>
-          <div className="adminField full">
-            <label>Full description</label>
-            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Detailed product description" rows={6} />
+          <div className="adminField full productDescriptionField">
+            <span>Full description</span>
+            <BlogEditor
+              value={form.description}
+              onChange={(html) => set("description", html)}
+              placeholder="Write a clear, detailed product description…"
+              ariaLabel="Product full description"
+              mode="product"
+            />
+            <small>
+              Use short sections, lists, and safe links for a description that
+              is easy to scan.
+            </small>
           </div>
           <div className="adminField">
             <label>Status</label>
-            <select value={form.status} onChange={(e) => set("status", e.target.value as ProductFormData["status"])}>
-              <option value="draft">Draft</option><option value="published">Published</option><option value="archived">Archived</option>
+            <select
+              value={form.status}
+              onChange={(e) =>
+                set("status", e.target.value as ProductFormData["status"])
+              }
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
             </select>
           </div>
-          <div className="adminField"><label><input type="checkbox" checked={form.isActive} onChange={(e) => set("isActive", e.target.checked)} /> Active</label></div>
-          <div className="adminField"><label><input type="checkbox" checked={form.featured} onChange={(e) => set("featured", e.target.checked)} /> Featured</label></div>
+          <div className="adminField">
+            <label>
+              <input
+                type="checkbox"
+                checked={form.isActive}
+                onChange={(e) => set("isActive", e.target.checked)}
+              />{" "}
+              Active
+            </label>
+          </div>
+          <div className="adminField">
+            <label>
+              <input
+                type="checkbox"
+                checked={form.featured}
+                onChange={(e) => set("featured", e.target.checked)}
+              />{" "}
+              Featured
+            </label>
+          </div>
         </div>
       </section>
 
@@ -405,29 +757,58 @@ export default function ProductEditorPage() {
         <div className="adminFormGrid">
           <div className="adminField full">
             <label>SEO title</label>
-            <input value={form.seoTitle} onChange={(e) => set("seoTitle", e.target.value)} placeholder="Optional search title" />
+            <input
+              value={form.seoTitle}
+              onChange={(e) => set("seoTitle", e.target.value)}
+              placeholder="Optional search title"
+            />
           </div>
 
           <div className="adminField full">
             <label>Meta description</label>
-            <textarea value={form.seoDescription} onChange={(e) => set("seoDescription", e.target.value)} placeholder="Optional search description" rows={3} />
+            <textarea
+              value={form.seoDescription}
+              onChange={(e) => set("seoDescription", e.target.value)}
+              placeholder="Optional search description"
+              rows={3}
+            />
           </div>
 
           <div className="adminField full">
             <label>Meta keywords (comma-separated)</label>
-            <input value={form.seoKeywords} onChange={(e) => set("seoKeywords", e.target.value)} placeholder="Optional keywords" />
+            <input
+              value={form.seoKeywords}
+              onChange={(e) => set("seoKeywords", e.target.value)}
+              placeholder="Optional keywords"
+            />
           </div>
 
           <div className="adminField">
             <label>OG Image URL</label>
-            <input value={form.ogImageUrl} onChange={(e) => set("ogImageUrl", e.target.value)} placeholder="https://mehtaxd.com/images/product-og.jpg" />
-            {fieldErrors.ogImageUrl ? <small className="adminFieldError" role="alert">{fieldErrors.ogImageUrl}</small> : null}
+            <input
+              value={form.ogImageUrl}
+              onChange={(e) => set("ogImageUrl", e.target.value)}
+              placeholder="https://mehtaxd.com/images/product-og.jpg"
+            />
+            {fieldErrors.ogImageUrl ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.ogImageUrl}
+              </small>
+            ) : null}
           </div>
 
           <div className="adminField">
             <label>Canonical URL</label>
-            <input value={form.canonicalUrl} onChange={(e) => set("canonicalUrl", e.target.value)} placeholder="https://mehtaxd.com/products/product-slug" />
-            {fieldErrors.canonicalUrl ? <small className="adminFieldError" role="alert">{fieldErrors.canonicalUrl}</small> : null}
+            <input
+              value={form.canonicalUrl}
+              onChange={(e) => set("canonicalUrl", e.target.value)}
+              placeholder="https://mehtaxd.com/products/product-slug"
+            />
+            {fieldErrors.canonicalUrl ? (
+              <small className="adminFieldError" role="alert">
+                {fieldErrors.canonicalUrl}
+              </small>
+            ) : null}
           </div>
         </div>
       </section>
