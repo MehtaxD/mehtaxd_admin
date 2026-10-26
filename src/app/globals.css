@@ -4108,3 +4108,14 @@
     }
   }
 }
+/* Order-linked refunds reuse existing Admin form and dialog controls. */
+.adminRefundTotals { display:flex; flex-wrap:wrap; gap:16px 32px; margin:20px 0; }
+.adminRefundTotals dd { margin:4px 0 0; font-weight:700; font-variant-numeric:tabular-nums; }
+.adminRefundHistory { padding-left:20px; }
+.adminRefundHistory li { padding:12px 0; overflow-wrap:anywhere; border-bottom:1px solid var(--line); }
+.adminRefundDialog { margin:auto; border:1px solid var(--line); color:var(--text); background:var(--surface); }
+.adminRefundDialog::backdrop { background:rgb(0 0 0 / 55%); }
+.adminRefundDialog fieldset { border:0; padding:0; margin:0; min-width:0; }
+.adminRefundDialog select { width:100%; min-height:44px; padding:10px; margin:8px 0 16px; color:var(--text); background:var(--surface); border:1px solid var(--line); }
+.adminRefundConfirm { display:flex; gap:10px; align-items:flex-start; margin:16px 0; }
+.adminRefundDialog .adminRefundConfirm input { width:20px; min-height:20px; flex:0 0 20px; }

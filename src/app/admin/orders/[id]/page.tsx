@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { OrderRefunds } from '@/components/order-refunds';
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowIcon, ChevronDown, Loader2, RotateCcw } from "@/components/icons";
@@ -152,6 +153,7 @@ export default function AdminOrderDetailPage() {
 
   const legalFulfillmentTransitions = useMemo(() => {
     if (!order) return [];
+    if (order.paidMinor > 0 && order.refundedMinor >= order.paidMinor && order.fulfillmentStatus !== 'completed') return [];
     return FULFILLMENT_TRANSITIONS[order.fulfillmentStatus].filter((next) => {
       if (next === "cancelled") return order.orderStatus === "cancelled";
       return order.orderStatus === "confirmed";
@@ -681,7 +683,7 @@ export default function AdminOrderDetailPage() {
             <div>
               <dt>Payment</dt>
               <dd>
-                {latestPayment ? badge(latestPayment.status) : "No attempt"}
+                {order.refundedMinor > 0 ? badge(order.refundedMinor >= order.paidMinor ? 'refunded' : 'partially_refunded') : latestPayment ? badge(latestPayment.status) : "No attempt"}
               </dd>
             </div>
             <div>
@@ -755,6 +757,7 @@ export default function AdminOrderDetailPage() {
             </div>
           </div>
 
+          <OrderRefunds orderId={order.id} onChanged={loadOrder} />
           <div className="adminOrderCommunication">
             <div className="adminPanelHead">
               <h2>Payments</h2>
@@ -987,7 +990,7 @@ export default function AdminOrderDetailPage() {
               <button
                 className="adminButton primary"
                 onClick={createDelivery}
-                disabled={!deliveryPayload.trim() || Boolean(mutating)}
+                disabled={!deliveryPayload.trim() || Boolean(mutating) || (order.paidMinor > 0 && order.refundedMinor >= order.paidMinor)}
               >
                 {mutating === "delivery"
                   ? "Posting delivery…"

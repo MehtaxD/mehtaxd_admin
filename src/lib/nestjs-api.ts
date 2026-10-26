@@ -44,7 +44,9 @@ async function request<T>(
         : null;
     if (fields && typeof fields === "object" && !Array.isArray(fields))
       throw new AdminFieldError(safe.message, fields as Record<string, string>);
-    throw new Error(safe.message);
+    throw Object.assign(new Error(safe.message), {
+      refundOutcome: /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(endpoint) && options.method === "POST" && [400, 409, 422].includes(response.status) && errorData && typeof errorData === "object" && Reflect.get(errorData, "refundOutcome") === "rejected" ? "rejected" : undefined,
+    });
   }
 
   if (response.status === 204) {
@@ -465,6 +467,11 @@ export const nestjsApi = {
       );
     },
     get: (id: string) => request<AdminOrder>(`/admin/orders/${id}`),
+    refunds: (id: string) => request<AdminRefundSummary>(`/admin/orders/${id}/refunds`, { signal: AbortSignal.timeout(30_000) }),
+    createRefund: (id: string, data: CreateRefundInput, key: string) =>
+      request<AdminRefund>(`/admin/orders/${id}/refunds`, {
+        method: 'POST', headers: { 'Idempotency-Key': key }, body: JSON.stringify(data), signal: AbortSignal.timeout(30_000),
+      }),
     transitionStatus: (
       id: string,
       data: { status: OrderStatus; expectedVersion: number },
@@ -721,6 +728,34 @@ export interface AdminCustomerAudit {
 
 export type OrderStatus =
   "awaiting_payment" | "confirmed" | "completed" | "cancelled" | "expired";
+
+export interface CreateRefundInput {
+  amountMinor: number;
+  destination: 'store_credit' | 'original_payment_manual';
+  reason: string;
+  paymentId?: string;
+  externalReference?: string;
+  manualRefundConfirmed?: boolean;
+}
+export interface AdminRefund extends CreateRefundInput {
+  id: string;
+  currency: string;
+  scope: 'full' | 'partial';
+  status: 'pending' | 'succeeded' | 'failed' | 'needs_review';
+  adminUserId: string;
+  createdAt: string;
+  idempotencyKey: string;
+}
+export interface AdminRefundSummary {
+  paidMinor: number;
+  refundedMinor: number;
+  remainingRefundableMinor: number;
+  currency: string;
+  storeCreditAllowed: boolean;
+  reconciliationRequired: boolean;
+  sourcePayments: {id:string;provider:string;amountMinor:number;availableMinor:number}[];
+  history: AdminRefund[];
+}
 export type FulfillmentStatus =
   "unfulfilled" | "processing" | "delivered" | "completed" | "cancelled";
 
@@ -949,6 +984,8 @@ export interface AdminOrder {
   createdAt: string;
   updatedAt: string;
   chatUnreadCount?: number;
+  financialStatus?: "succeeded" | "partially_refunded" | "refunded" | null;
+  remainingRefundableMinor?: number;
   paymentSource?: string | null;
   paymentStatus?: string | null;
   reconciliationRequired?: boolean;

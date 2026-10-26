@@ -102,6 +102,12 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
   }
   const body = binary ? await upstream.arrayBuffer() : await upstream.text();
   if (!upstream.ok) {
+    let refundOutcome: "rejected" | undefined;
+    if (init.method === "POST" && /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(path) && [400, 409, 422].includes(upstream.status)) {
+      try {
+        if (JSON.parse(body as string).refundOutcome === "rejected") refundOutcome = "rejected";
+      } catch { /* Unknown outcomes stay protected. */ }
+    }
     const gameRequest = /^\/games(?:\/[0-9a-fA-F-]{36})?$/.test(path);
     const productRequest = /^\/(?:games\/[0-9a-fA-F-]{36}\/products|products\/[0-9a-fA-F-]{36})$/.test(path);
     const mediaRequest = path === "/admin/games/media" || path === "/admin/products/media";
@@ -126,7 +132,7 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
         ? "The requested Admin record was not found. Refresh the page and try again."
         : undefined,
     );
-    const response = NextResponse.json(Object.keys(productFields).length ? { ...normalized, fields: productFields } : normalized, { status: upstream.status });
+    const response = NextResponse.json({ ...normalized, ...(Object.keys(productFields).length ? { fields: productFields } : {}), ...(refundOutcome ? { refundOutcome } : {}) }, { status: upstream.status });
     if (rotated) setAdminCookies(response, rotated);
     if (upstream.status === 401) clearAdminCookies(response);
     return response;
@@ -161,7 +167,7 @@ export async function proxyAdminRequest(request: Request, backendPath: string) {
   const headers: Record<string, string> = {};
   if (body) headers["Content-Type"] = "application/json";
   // This existing customer action requires a caller key, never caller auth headers.
-  if (method === "POST" && /^\/admin\/customers\/[0-9a-fA-F-]{36}\/wallet\/credits$/.test(backendPath)) {
+  if (method === "POST" && (/^\/admin\/customers\/[0-9a-fA-F-]{36}\/wallet\/credits$/.test(backendPath) || /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(backendPath))) {
     const key = request.headers.get("idempotency-key");
     if (key !== null) headers["Idempotency-Key"] = key;
   }

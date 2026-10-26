@@ -25,6 +25,7 @@ const allowed: Record<string, RegExp[]> = {
       `^admin/orders/${customerUuid}/deliveries/${customerUuid}/evidence\\.pdf$`,
     ),
     new RegExp(`^admin/orders/${uuid}/payments(\\?.*)?$`),
+    new RegExp(`^admin/orders/${customerUuid}/refunds$`),
     new RegExp(`^admin/payments/${uuid}/events(\\?.*)?$`),
   ],
   POST: [
@@ -36,6 +37,7 @@ const allowed: Record<string, RegExp[]> = {
       `^admin/customers/${customerUuid}/(revoke-sessions|notes|wallet/credits)$`,
     ),
     new RegExp(`^admin/orders/${uuid}/(chat/messages|deliveries)$`),
+    new RegExp(`^admin/orders/${customerUuid}/refunds$`),
   ],
   PATCH: [
     /^admin\/payment-profiles\/store-default$/,
