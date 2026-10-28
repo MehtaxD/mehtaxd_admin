@@ -84,6 +84,12 @@ function harness(upstream) {
   );
   return { calls, send, client: client.nestjsApi };
 }
+test("delivery creation forwards its stable operation key and allows empty optional content", async()=>{
+  const h=harness();
+  assert.equal((await h.send('POST',`/admin/orders/${id}/deliveries`,{expectedVersion:1})).status,200);
+  assert.equal(new Headers(h.calls[0].headers).get('Idempotency-Key'),'refund-test-idempotency-key');
+  assert.equal((await h.send('POST',`/admin/orders/${id}/deliveries/${id}/evidence/retry`,{})).status,200);
+});
 test("refund reads and writes use exact allowlisted Order path and forward only trusted auth plus idempotency", async () => {
   const h = harness();
   assert.equal(

@@ -4119,3 +4119,80 @@
 .adminRefundDialog select { width:100%; min-height:44px; padding:10px; margin:8px 0 16px; color:var(--text); background:var(--surface); border:1px solid var(--line); }
 .adminRefundConfirm { display:flex; gap:10px; align-items:flex-start; margin:16px 0; }
 .adminRefundDialog .adminRefundConfirm input { width:20px; min-height:20px; flex:0 0 20px; }
+
+/* Order details: one work column, secondary finance and history. */
+.adminOrderSummary { align-items: flex-start; margin-bottom: 16px; }
+.adminOrderSummary h1 { font-size: 26px; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.adminOrderSummary p { margin: 6px 0 10px; }
+.adminOrderSummaryStatuses { display: flex; flex-wrap: wrap; gap: 6px; }
+.adminOrderNextActions { margin-bottom: 16px; }
+.adminOrderNextActions .adminOrderTransitionPanel { display: flex; flex-wrap: wrap; gap: 16px; border: 0; background: transparent; }
+.adminOrderNextActions .adminOrderTransitionPanel > div { padding: 0; background: transparent; }
+.adminOrderNextActions .adminOrderTransitionPanel > p { font-size: 13px; color: #666; }
+.adminOrderLayout { grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; }
+.adminOrderLayout .adminOrderWork { padding: 20px; }
+.adminOrderLayout .adminOrderSubhead { padding: 0; margin-bottom: 14px; }
+.adminOrderLayout .adminOrderItems { padding: 0; gap: 14px; }
+.adminOrderLayout .adminOrderItems article { grid-template-columns: 64px minmax(0, 1fr); padding: 0; border: 0; border-radius: 0; align-items: start; }
+.adminOrderLayout .adminOrderItemImage { width: 64px; height: 64px; border-radius: 4px; }
+.adminOrderLayout .adminOrderItems article > dl { grid-column: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.adminOrderLayout .adminOrderItems p { font-size: 13px; overflow-wrap: anywhere; }
+.adminOrderLayout .adminOrderItems article > div:nth-child(2) > span,
+.adminOrderLayout .adminOrderFacts dt,
+.adminOrderLayout .adminOrderItems dt { font-size: 12px; letter-spacing: 0; font-weight: 500; text-transform: none; color: #666; }
+.adminOrderLayout .adminOrderItemOptions { margin-block: 8px; }
+.adminOrderLayout .adminOrderCommunication { margin-top: 20px; padding: 20px 0 0; border: 0; border-top: 1px solid #e5e5e5; }
+.adminOrderLayout .adminPanelHead { padding: 0; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.adminOrderLayout .adminPanelHead span { font-size: 12px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+.adminOrderLayout .adminOrderChatWorkspace { display: block; margin: 20px 0 0; border: 0; border-top: 1px solid #e5e5e5; background: transparent; }
+.adminOrderLayout .adminOrderChatPanel { padding: 20px 0 0; }
+.adminOrderLayout .adminChatViewport {
+  height: clamp(320px, 46dvh, 520px);
+  overscroll-behavior: auto;
+}
+.adminOrderLayout .adminOrderChatHead { flex-wrap: wrap; }
+.adminOrderLayout .adminOrderCustomer,
+.adminOrderLayout .adminFinancialSummary,
+.adminOrderLayout .adminOrderActivity { padding: 20px; min-width: 0; overflow-wrap: anywhere; }
+.adminOrderCustomer h2 { margin: 0 0 10px; font-size: 16px; }
+.adminOrderCustomer > a { display: block; margin-top: 8px; }
+.adminOrderLayout summary { padding-block: 12px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.adminOrderLayout summary:focus-visible { outline: 2px solid #e6002d; outline-offset: 2px; }
+.adminOrderLayout .adminOrderActivity > summary { padding: 0; }
+.adminOrderLayout .adminOrderFacts { padding: 12px 0; }
+.adminOrderLayout .adminOrderActivity .adminPanelHead { margin-top: 20px; }
+.adminOrderLayout .adminPaymentAttempts { grid-template-columns: 1fr; }
+.adminOrderLayout .adminPaymentAttempts article { min-width: 0; grid-template-columns: 1fr; }
+.adminOrderLayout .adminPaymentAttempts article > button { grid-column: 1; grid-row: auto; justify-self: start; }
+.adminOrderLayout .adminOrderEvents { padding-inline: 0; }
+.adminOrderLayout .adminRefundTotals { display: grid; gap: 12px; }
+.adminOrderLayout .adminRefundTotals > div { display: flex; justify-content: space-between; gap: 12px; }
+.adminOrderLayout .adminRefundTotals dt { font-size: 13px; color: #666; }
+.adminOrderLayout .adminRefundTotals dd { margin: 0; }
+.adminOrderLayout .adminOrderPaymentHistory .adminOrderCommunication { margin: 0; border: 0; padding: 8px 0; }
+.adminOrderLayout .adminOrderDeliveryEntry { margin-top: 12px; }
+.adminOrderLayout .adminDeliveryAttachments { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.adminOrderLayout .adminDeliveryAttachments a { display: block; width: min(160px, 100%); }
+.adminOrderLayout .adminDeliveryAttachments img { width: 100%; height: 110px; object-fit: contain; background: var(--surface-2); }
+.adminOrderLayout .adminDeliveryUploads { grid-column: 1 / -1; padding: 0; list-style: none; display: grid; gap: 8px; }
+.adminOrderLayout .adminDeliveryUploads li, .adminOrderLayout .adminEvidencePending { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.adminOrderLayout .adminDeliveryForm { padding: 12px 0 0; }
+
+@media (max-width: 1000px) {
+  .adminOrderLayout { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .adminOrderSummary h1 { font-size: 22px; }
+  .adminOrderSummary { gap: 12px; }
+  .adminOrderLayout { gap: 16px; }
+  .adminOrderLayout .adminOrderWork,
+  .adminOrderLayout .adminOrderCustomer,
+  .adminOrderLayout .adminFinancialSummary,
+  .adminOrderLayout .adminOrderActivity { padding: 16px; }
+  .adminOrderLayout .adminOrderItems article { grid-template-columns: 52px minmax(0, 1fr); gap: 10px; }
+  .adminOrderLayout .adminOrderItemImage { width: 52px; height: 52px; }
+  .adminOrderLayout .adminOrderItems article > dl { grid-column: 1 / -1; }
+  .adminOrderLayout .adminOrderChatHead h2 { font-size: 16px; }
+  .adminOrderLayout .adminChatViewport { height: clamp(250px, 48dvh, 400px); }
+  .adminOrderLayout .adminDeliveryForm { grid-template-columns: 1fr; }
+}

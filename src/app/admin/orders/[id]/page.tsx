@@ -15,6 +15,8 @@ import {
   type OrderDelivery,
   type OrderEvent,
   type OrderStatus,
+  type CreateDeliveryDto,
+  type DeliveryAttachment,
 } from "@/lib/nestjs-api";
 import {
   applyReceipt,
@@ -116,6 +118,10 @@ export default function AdminOrderDetailPage() {
   const [chatBody, setChatBody] = useState("");
   const [deliveryPayload, setDeliveryPayload] = useState("");
   const [deliverySummary, setDeliverySummary] = useState("");
+  const [deliveryFormOpen,setDeliveryFormOpen]=useState(false);
+  const [deliveryImages,setDeliveryImages]=useState<DeliveryAttachment[]>([]);
+  const [deliveryUncertain,setDeliveryUncertain]=useState(false);
+  const deliveryOperation=useRef<{key:string;data:CreateDeliveryDto}|null>(null);
   const [deliveryType, setDeliveryType] = useState<
     "text" | "code" | "instructions"
   >("instructions");
@@ -313,6 +319,7 @@ export default function AdminOrderDetailPage() {
     status: OrderStatus | FulfillmentStatus,
   ) {
     if (!order) return;
+    if(kind==="fulfillment" && status==="delivered") {setDeliveryFormOpen(true);return;}
     if (
       ["cancelled", "expired"].includes(status) &&
       !window.confirm(
@@ -401,23 +408,32 @@ export default function AdminOrderDetailPage() {
   }
 
   async function createDelivery() {
-    if (!order || !deliveryPayload.trim()) return;
+    if (!order || mutating) return;
     setMutating("delivery");
     setError("");
     setNotice("");
     try {
-      const delivery = await nestjsApi.orders.createDelivery(order.id, {
+      const operation=deliveryOperation.current ?? {key:`delivery-${crypto.randomUUID()}`,data:{
         deliveryType,
         customerVisibleSummary: deliverySummary.trim() || undefined,
         payload: deliveryPayload.trim(),
+        attachmentIds:deliveryImages.map(image=>image.id),
+        recoverMissing:order.fulfillmentStatus==="delivered" && deliveries.length===0,
         expectedVersion: order.version,
-      });
-      setDeliveries((current) => [...current, delivery]);
+      }};
+      deliveryOperation.current=operation;
+      const delivery = await nestjsApi.orders.createDelivery(order.id,operation.data,operation.key);
+      setDeliveries((current) => [...current.filter(item=>item.id!==delivery.id), delivery]);
+      deliveryOperation.current=null;
+      setDeliveryUncertain(false);setDeliveryImages([]);setDeliveryFormOpen(false);
       setDeliveryPayload("");
       setDeliverySummary("");
-      setOrder(await nestjsApi.orders.get(params.id));
       setNotice("Delivery posted and fulfillment moved to Delivered.");
+      try {setOrder(await nestjsApi.orders.get(params.id));await loadCommunication();}
+      catch {setNotice("Delivery saved. Refresh this Order to load its latest details.");}
     } catch (err) {
+      const definitive=err && typeof err==='object' && 'status' in err && [400,409,422].includes(Number(err.status));
+      if(definitive) {deliveryOperation.current=null;setDeliveryUncertain(false);} else setDeliveryUncertain(true);
       const message =
         err instanceof Error ? err.message : "Delivery could not be created.";
       setError(
@@ -434,6 +450,27 @@ export default function AdminOrderDetailPage() {
     } finally {
       setMutating("");
     }
+  }
+
+  async function uploadDeliveryImages(files:FileList|null) {
+    if(!order || !files || mutating || deliveryUncertain)return;
+    if(deliveryImages.length+files.length>5){setError("Choose at most 5 delivery images.");return;}
+    setMutating("delivery-images");setError("");
+    try {
+      for(const file of Array.from(files)) {
+        if(file.size>5*1024*1024 || !["image/png","image/jpeg","image/webp"].includes(file.type))throw new Error("Use PNG, JPEG or WebP images up to 5 MB each.");
+        const image=await nestjsApi.orders.uploadDeliveryImage(order.id,file);
+        setDeliveryImages(current=>[...current,image]);
+      }
+    } catch(err){setError(err instanceof Error?err.message:"Image upload failed. Uploaded images are preserved.");}
+    finally{setMutating("");}
+  }
+
+  async function retryEvidence(deliveryId:string) {
+    if(mutating)return;setMutating("evidence-retry");setError("");
+    try{await nestjsApi.orders.retryDeliveryEvidence(params.id,deliveryId);await loadCommunication();setNotice("Evidence PDF retry requested. Refresh to check its status.");}
+    catch(err){setError(err instanceof Error?err.message:"Evidence retry could not be requested.");}
+    finally{setMutating("");}
   }
 
   if (loading)
@@ -460,17 +497,23 @@ export default function AdminOrderDetailPage() {
     (payment) => payment.reconciliationRequired,
   );
   const latestPayment = payments[0] ?? null;
+  const financialState = order.refundedMinor > 0
+    ? order.refundedMinor >= order.paidMinor ? "refunded" : "partially_refunded"
+    : latestPayment?.status || order.financialStatus || "unpaid";
+  const canMarkDelivery=order.orderStatus==="confirmed" && order.paidMinor>order.refundedMinor && order.fulfillmentStatus==="processing";
+  const canRecoverDelivery=order.orderStatus==="confirmed" && order.paidMinor>order.refundedMinor && order.fulfillmentStatus==="delivered" && deliveries.length===0 && !communicationLoading;
 
   return (
     <>
-      <div className="adminPageHead">
+      <div className="adminPageHead adminOrderSummary">
         <div>
-          <div className="adminEyebrow">Order Detail</div>
           <h1>{order.orderNumber}</h1>
-          <p>
-            {order.customerEmail} · Version {order.version} · Internal ID{" "}
-            {order.id}
-          </p>
+          <p>{order.customerName || "Name not provided"}</p>
+          <div className="adminOrderSummaryStatuses">
+            {badge(order.orderStatus)}
+            {badge(financialState)}
+            {badge(order.fulfillmentStatus)}
+          </div>
         </div>
         <div className="adminOrderActions">
           <button
@@ -506,223 +549,12 @@ export default function AdminOrderDetailPage() {
         </div>
       ) : null}
 
-      <section
-        className="adminOrderChatWorkspace"
-        aria-labelledby="admin-order-chat-heading"
-      >
-        <div className="adminOrderChatPanel">
-          <div className="adminOrderChatHead">
-            <div>
-              <h2 id="admin-order-chat-heading">Customer conversation</h2>
-              <p>Private support for {order.orderNumber}</p>
-            </div>
-            <div className="adminChatHeadActions">
-              {connectionState === "connecting" ? (
-                <span className="adminChatConnection" role="status">
-                  Connecting…
-                </span>
-              ) : connectionState === "reconnecting" ? (
-                <span
-                  className="adminChatConnection reconnecting"
-                  role="status"
-                >
-                  Reconnecting…
-                </span>
-              ) : connectionState === "unauthorized" ? (
-                <span className="adminChatConnection unavailable" role="alert">
-                  Chat authorization expired. Refresh this Order.
-                </span>
-              ) : connectionState === "unavailable" ? (
-                <span className="adminChatConnection unavailable" role="alert">
-                  Order Chat is unavailable. Refresh this Order to retry.
-                </span>
-              ) : connectionRestored ? (
-                <span className="adminChatConnection restored" role="status">
-                  Connection restored
-                </span>
-              ) : null}
-              <button
-                className="adminButton adminChatRefresh"
-                onClick={loadCommunication}
-                disabled={communicationLoading || Boolean(mutating)}
-              >
-                <RotateCcw size={14} />
-                <span>Refresh</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="adminSensitiveNotice adminChatSafety">
-            Never request passwords, 2FA codes, card details, or account
-            credentials.
-          </div>
-
-          <div className="adminChatViewportShell">
-            {communicationLoading && messages.length === 0 ? (
-              <div className="adminChatLoading" role="status">
-                <Loader2 className="adminSpinner" size={18} /> Loading
-                conversation…
-              </div>
-            ) : null}
-            <ol
-              className="adminChatMessages adminChatViewport"
-              ref={chatViewportRef}
-              onScroll={handleChatScroll}
-            >
-              {messages.length === 0 && !communicationLoading ? (
-                <li className="empty">
-                  No messages yet. Start with a clear order update.
-                </li>
-              ) : (
-                messages.map((message) => (
-                  <li
-                    className={
-                      message.senderType === "admin" ? "staff" : "customer"
-                    }
-                    key={message.id}
-                  >
-                    <div className="adminMessageMeta">
-                      <strong>
-                        {message.senderType === "admin"
-                          ? "MehtaXD"
-                          : message.senderLabel}
-                      </strong>
-                      <time>{date(message.createdAt)}</time>
-                    </div>
-                    <p>{message.body}</p>
-                    {message.senderType === "admin" ? (
-                      <span
-                        className={`adminMessageReceipt ${message.receiptStatus}`}
-                        aria-label={message.receiptLabel}
-                        title={message.receiptLabel}
-                      >
-                        <span className="adminReceiptTicks" aria-hidden="true">
-                          {message.pending
-                            ? "…"
-                            : message.receiptStatus === "sent"
-                              ? "✓"
-                              : "✓✓"}
-                        </span>
-                        <span>
-                          {message.pending ? "Sending" : message.receiptLabel}
-                        </span>
-                      </span>
-                    ) : null}
-                  </li>
-                ))
-              )}
-            </ol>
-            {showNewest ? (
-              <button
-                className="adminChatJump"
-                type="button"
-                onClick={() => scrollToNewest()}
-              >
-                <ChevronDown size={15} /> Jump to newest
-              </button>
-            ) : null}
-          </div>
-
-          <div className="adminChatComposer">
-            <label className="srOnly" htmlFor="admin-chat-body">
-              Reply to customer
-            </label>
-            <textarea
-              id="admin-chat-body"
-              value={chatBody}
-              rows={1}
-              maxLength={4000}
-              onChange={(event) => setChatBody(event.target.value)}
-              onKeyDown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.nativeEvent.isComposing
-                ) {
-                  event.preventDefault();
-                  if (chatBody.trim() && !mutating) void sendAdminMessage();
-                }
-              }}
-              placeholder="Write an order update…"
-            />
-            <button
-              className="adminButton primary adminChatSend"
-              onClick={sendAdminMessage}
-              disabled={!chatBody.trim() || Boolean(mutating)}
-            >
-              <span>{mutating === "chat" ? "Sending…" : "Send"}</span>
-              <ArrowIcon size={16} />
-            </button>
-          </div>
-        </div>
-
-        <aside
-          className="adminOrderSupportContext"
-          aria-label="Order support context"
-        >
-          <div className="adminSupportCustomer">
-            <span>Customer</span>
-            <strong>{order.customerName || "Name not provided"}</strong>
-            <a href={`mailto:${order.customerEmail}`}>{order.customerEmail}</a>
-          </div>
-          <dl>
-            <div>
-              <dt>Order</dt>
-              <dd>{order.orderNumber}</dd>
-            </div>
-            <div>
-              <dt>Total</dt>
-              <dd>
-                {money(order.totalMinor, order.currency)} {order.currency}
-              </dd>
-            </div>
-            <div>
-              <dt>Order status</dt>
-              <dd>{badge(order.orderStatus)}</dd>
-            </div>
-            <div>
-              <dt>Payment</dt>
-              <dd>
-                {order.refundedMinor > 0 ? badge(order.refundedMinor >= order.paidMinor ? 'refunded' : 'partially_refunded') : latestPayment ? badge(latestPayment.status) : "No attempt"}
-              </dd>
-            </div>
-            <div>
-              <dt>Fulfillment</dt>
-              <dd>{badge(order.fulfillmentStatus)}</dd>
-            </div>
-            <div>
-              <dt>Created</dt>
-              <dd>{date(order.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Paid</dt>
-              <dd>{date(order.paidAt)}</dd>
-            </div>
-          </dl>
-          {order.customerId ? (
-            <Link
-              className="adminTextLink"
-              href={`/admin/customers/${order.customerId}`}
-            >
-              Open customer record →
-            </Link>
-          ) : null}
-        </aside>
-      </section>
-
-      <div className="adminOrderDetailGrid">
-        <section className="adminPanel adminOrderDetailMain">
-          <div className="adminPanelHead">
-            <h2>Operational controls</h2>
-            <span>Expected version {order.version}</span>
-          </div>
-          <div className="adminOrderTransitionPanel">
+      <div className="adminOrderNextActions">
+        <div className="adminOrderTransitionPanel">
+          {legalOrderTransitions.length > 0 && (
             <div>
               <h3>Order status</h3>
-              {legalOrderTransitions.length === 0 ? (
-                <p>No legal order transitions are available.</p>
-              ) : (
-                legalOrderTransitions.map((status) => (
+              {legalOrderTransitions.map((status) => (
                   <button
                     className="adminButton primary"
                     key={status}
@@ -733,15 +565,13 @@ export default function AdminOrderDetailPage() {
                       ? "Saving..."
                       : `Move to ${label(status)}`}
                   </button>
-                ))
-              )}
+                ))}
             </div>
+          )}
+          {legalFulfillmentTransitions.length > 0 && (
             <div>
               <h3>Fulfillment status</h3>
-              {legalFulfillmentTransitions.length === 0 ? (
-                <p>No legal fulfillment transitions are available.</p>
-              ) : (
-                legalFulfillmentTransitions.map((status) => (
+              {legalFulfillmentTransitions.map((status) => (
                   <button
                     className="adminButton primary"
                     key={status}
@@ -750,83 +580,90 @@ export default function AdminOrderDetailPage() {
                   >
                     {mutating === `fulfillment:${status}`
                       ? "Saving..."
-                      : `Move to ${label(status)}`}
+                      : status==="delivered" ? "Mark Delivered" : `Move to ${label(status)}`}
                   </button>
-                ))
-              )}
+                ))}
             </div>
-          </div>
-
-          <OrderRefunds orderId={order.id} onChanged={loadOrder} />
-          <div className="adminOrderCommunication">
-            <div className="adminPanelHead">
-              <h2>Payments</h2>
-              <button
-                className="adminButton"
-                onClick={loadPayments}
-                disabled={paymentsLoading}
-              >
-                {paymentsLoading ? "Loading…" : "Refresh payments"}
-              </button>
-            </div>
-            {payments.length === 0 ? (
-              <p className="adminMuted">No payment attempts.</p>
-            ) : (
-              <div className="adminPaymentAttempts">
-                {payments.map((payment) => (
-                  <article key={payment.id}>
-                    <div>
-                      <strong>
-                        {money(payment.amountMinor, payment.currency)}
-                      </strong>
-                      {badge(payment.status)}
-                    </div>
-                    <p>
-                      {payment.provider === "wallet"
-                        ? "Store Credit"
-                        : `${label(payment.provider)} provider`}{" "}
-                      · {date(payment.createdAt)}
-                    </p>
-                    {payment.reconciliationRequired ? (
-                      <p role="alert">
-                        Reconciliation required:{" "}
-                        {payment.reconciliationReason ??
-                          "Review this payment and Order."}
+          )}
+          {!legalOrderTransitions.length &&
+            !legalFulfillmentTransitions.length && (
+              <p className="adminMuted">
+                {order.orderStatus === "completed"
+                  ? "Completed — no further actions required."
+                  : "No status actions available."}
+              </p>
+            )}
+        </div>
+        {canRecoverDelivery ? <button className="adminButton" onClick={()=>setDeliveryFormOpen(true)} disabled={Boolean(mutating)}>Create missing delivery record</button>:null}
+      </div>
+      <div className="adminOrderDetailGrid adminOrderLayout">
+        <section className="adminPanel adminOrderDetailMain adminOrderWork">
+          <section className="adminOrderItemsSection">
+            <h2 className="adminOrderSubhead">Items</h2>
+            <div className="adminOrderItems">
+              {order.items.map((item) => (
+                <article key={item.id}>
+                  <div className="adminOrderItemImage">
+                    <span>{item.productName.slice(0, 2).toUpperCase()}</span>
+                    {item.imageUrl ? (
+                      <img
+                        src={mediaUrl(item.imageUrl)}
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.hidden = true;
+                        }}
+                      />
+                    ) : null}
+                  </div>
+                  <div>
+                    <span>
+                      {[item.gameName, item.categoryName]
+                        .filter(Boolean)
+                        .join(" / ") || item.productType}
+                    </span>
+                    <h3>{item.productName}</h3>
+                    {item.variantLabel && item.variantLabel !== "Default" ? (
+                      <p>
+                        <strong>Variant:</strong> {item.variantLabel}
                       </p>
                     ) : null}
-                    <button
-                      className="adminButton"
-                      onClick={() => loadPaymentEvents(payment.id)}
-                    >
-                      {selectedPaymentId === payment.id
-                        ? "Events selected"
-                        : "View events"}
-                    </button>
-                  </article>
-                ))}
-              </div>
-            )}
-            {selectedPaymentId ? (
-              <ol className="adminOrderEvents adminPaymentEvents">
-                {paymentEvents.length === 0 ? (
-                  <li>No provider events.</li>
-                ) : (
-                  paymentEvents.map((event) => (
-                    <li key={event.id}>
-                      <strong>{label(event.eventType)}</strong>
-                      <span>{label(event.status)}</span>
-                      <small>{date(event.createdAt)}</small>
-                    </li>
-                  ))
-                )}
-              </ol>
-            ) : null}
-          </div>
-
+                    {optionEntries(item.selectedOptions).length ? (
+                      <dl className="adminOrderItemOptions">
+                        {optionEntries(item.selectedOptions).map(
+                          ([name, value]) => (
+                            <div key={name}>
+                              <dt>{name}</dt>
+                              <dd>{value}</dd>
+                            </div>
+                          ),
+                        )}
+                      </dl>
+                    ) : null}
+                    <p>
+                      {item.deliveryInformation || "No delivery note stored."}
+                    </p>
+                  </div>
+                  <dl>
+                    <div>
+                      <dt>Quantity</dt>
+                      <dd>{item.quantity}</dd>
+                    </div>
+                    <div>
+                      <dt>Unit</dt>
+                      <dd>{money(item.unitPriceMinor, item.currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>Line</dt>
+                      <dd>{money(item.lineTotalMinor, item.currency)}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </div>
+          </section>
           <div className="adminOrderCommunication">
             <div className="adminPanelHead">
               <h2>Delivery</h2>
-              <span>Requires confirmed + processing</span>
             </div>
             <div className="adminDeliveryList">
               {deliveries.length === 0 ? (
@@ -841,11 +678,13 @@ export default function AdminOrderDetailPage() {
                       </strong>
                       <time>{date(delivery.deliveredAt)}</time>
                     </div>
-                    <pre>{delivery.payload || "Redacted"}</pre>
+                    {delivery.payload ? <pre>{delivery.payload}</pre> : delivery.payload===null ? <p className="adminMuted">Delivery content was redacted.</p>:null}
+                    {/* eslint-disable-next-line @next/next/no-img-element -- Authenticated evidence must bypass the public image optimizer. */}
+                    {delivery.attachments?.length ? <div className="adminDeliveryAttachments">{delivery.attachments.map((image,index)=><a key={image.id} href={`/api/admin/backend/admin/orders/${order.id}/deliveries/${delivery.id}/attachments/${image.id}`} target="_blank" rel="noreferrer"><img src={`/api/admin/backend/admin/orders/${order.id}/deliveries/${delivery.id}/attachments/${image.id}`} alt={`Delivery screenshot ${index+1}`} loading="lazy" /></a>)}</div>:null}
                     <small>
                       {delivery.acknowledgedAt
                         ? `Acknowledged ${date(delivery.acknowledgedAt)}`
-                        : "Waiting for customer acknowledgement"}
+                        : "Delivered · Awaiting buyer confirmation"}
                     </small>
                     {delivery.acknowledgement ? (
                       <section
@@ -915,7 +754,7 @@ export default function AdminOrderDetailPage() {
                           </details>
                         ) : null}
                         {delivery.acknowledgement.integrityStatus ===
-                        "valid" ? (
+                        "valid" && (delivery.evidencePdf?.status==="ready" || delivery.acknowledgement.evidenceVersion==="1") ? (
                           <button
                             className="adminButton"
                             type="button"
@@ -931,7 +770,7 @@ export default function AdminOrderDetailPage() {
                               "Download Evidence PDF"
                             )}
                           </button>
-                        ) : null}
+                        ) : delivery.acknowledgement.integrityStatus==="valid" ? <div className="adminEvidencePending" role="status"><span>Evidence PDF pending</span><button className="adminButton" type="button" disabled={Boolean(mutating)} onClick={()=>void retryEvidence(delivery.id)}>Retry evidence PDF</button></div> : null}
                       </section>
                     ) : null}
                     {!delivery.acknowledgement &&
@@ -955,188 +794,372 @@ export default function AdminOrderDetailPage() {
                 ))
               )}
             </div>
-            <div className="adminDeliveryForm">
-              <label>
-                Delivery type
-                <select
-                  value={deliveryType}
-                  onChange={(event) =>
-                    setDeliveryType(event.target.value as typeof deliveryType)
-                  }
-                >
-                  <option value="instructions">Instructions</option>
-                  <option value="code">Code</option>
-                  <option value="text">Text</option>
-                </select>
-              </label>
-              <label>
-                Customer-visible summary
-                <input
-                  value={deliverySummary}
-                  maxLength={220}
-                  onChange={(event) => setDeliverySummary(event.target.value)}
-                  placeholder="Delivered unlock instructions"
-                />
-              </label>
-              <label>
-                Delivery content
-                <textarea
-                  value={deliveryPayload}
-                  maxLength={8000}
-                  onChange={(event) => setDeliveryPayload(event.target.value)}
-                  placeholder="Paste only safe delivery text/code. Do not store account passwords here."
-                />
-              </label>
-              <button
-                className="adminButton primary"
-                onClick={createDelivery}
-                disabled={!deliveryPayload.trim() || Boolean(mutating) || (order.paidMinor > 0 && order.refundedMinor >= order.paidMinor)}
-              >
-                {mutating === "delivery"
-                  ? "Posting delivery…"
-                  : "Post delivery"}
-              </button>
-            </div>
+            {(canMarkDelivery || canRecoverDelivery || deliveryUncertain) ? (
+            <details id="delivery-entry" className="adminOrderDeliveryEntry" open={deliveryFormOpen} onToggle={event=>setDeliveryFormOpen(event.currentTarget.open)}>
+              <summary>Delivery details (optional)</summary>
+              <p className="adminMuted">{canRecoverDelivery ? "Creates the missing delivery record now. No historical content or buyer confirmation will be invented." : "Note, content and screenshots are optional."}</p>
+              {deliveryUncertain ? <p role="alert">Delivery result is uncertain. Retry the original request below; its operation key and content are preserved.</p>:null}
+              <div className="adminDeliveryForm">
+                <label>Delivery type
+                  <select value={deliveryType} disabled={deliveryUncertain || Boolean(mutating)} onChange={event=>setDeliveryType(event.target.value as typeof deliveryType)}>
+                    <option value="instructions">Instructions</option><option value="code">Code</option><option value="text">Text</option>
+                  </select>
+                </label>
+                <label>Customer-visible note (optional)
+                  <input value={deliverySummary} maxLength={220} disabled={deliveryUncertain || Boolean(mutating)} onChange={event=>setDeliverySummary(event.target.value)} />
+                </label>
+                <label>Delivery content (optional)
+                  <textarea value={deliveryPayload} maxLength={8000} disabled={deliveryUncertain || Boolean(mutating)} onChange={event=>setDeliveryPayload(event.target.value)} placeholder="Safe delivery instructions or code. Do not include passwords." />
+                </label>
+                <label>Screenshots (optional)
+                  <input type="file" accept="image/png,image/jpeg,image/webp" multiple disabled={deliveryUncertain || Boolean(mutating) || deliveryImages.length>=5} onChange={event=>{void uploadDeliveryImages(event.target.files);event.target.value="";}} />
+                  <small>Up to 5 images, 5 MB each. Stored encrypted.</small>
+                </label>
+                {deliveryImages.length ? <ul className="adminDeliveryUploads">{deliveryImages.map((image,index)=><li key={image.id}>Image {index+1} · {Math.ceil(image.sizeBytes/1024)} KB <button type="button" className="adminButton" disabled={deliveryUncertain || Boolean(mutating)} onClick={()=>setDeliveryImages(current=>current.filter(item=>item.id!==image.id))}>Remove image {index+1}</button></li>)}</ul>:null}
+                <button className="adminButton primary" onClick={createDelivery} disabled={Boolean(mutating)}>
+                  {mutating==="delivery" ? "Marking delivered…" : deliveryUncertain ? "Retry original delivery request" : canRecoverDelivery ? "Create delivery record now" : "Confirm & Mark Delivered"}
+                </button>
+              </div>
+            </details>
+            ):null}
           </div>
-
-          <h2 className="adminOrderSubhead">Items</h2>
-          <div className="adminOrderItems">
-            {order.items.map((item) => (
-              <article key={item.id}>
-                <div className="adminOrderItemImage">
-                  <span>{item.productName.slice(0, 2).toUpperCase()}</span>
-                  {item.imageUrl ? (
-                    <img
-                      src={mediaUrl(item.imageUrl)}
-                      alt=""
-                      onError={(event) => {
-                        event.currentTarget.hidden = true;
-                      }}
-                    />
+          <section
+            className="adminOrderChatWorkspace"
+            aria-labelledby="admin-order-chat-heading"
+          >
+            <div className="adminOrderChatPanel">
+              <div className="adminOrderChatHead">
+                <div>
+                  <h2 id="admin-order-chat-heading">Customer conversation</h2>
+                </div>
+                <div className="adminChatHeadActions">
+                  {connectionState === "connecting" ? (
+                    <span className="adminChatConnection" role="status">
+                      Connecting…
+                    </span>
+                  ) : connectionState === "reconnecting" ? (
+                    <span
+                      className="adminChatConnection reconnecting"
+                      role="status"
+                    >
+                      Reconnecting…
+                    </span>
+                  ) : connectionState === "unauthorized" ? (
+                    <span
+                      className="adminChatConnection unavailable"
+                      role="alert"
+                    >
+                      Chat authorization expired. Refresh this Order.
+                    </span>
+                  ) : connectionState === "unavailable" ? (
+                    <span
+                      className="adminChatConnection unavailable"
+                      role="alert"
+                    >
+                      Order Chat is unavailable. Refresh this Order to retry.
+                    </span>
+                  ) : connectionRestored ? (
+                    <span
+                      className="adminChatConnection restored"
+                      role="status"
+                    >
+                      Connection restored
+                    </span>
                   ) : null}
+                  <button
+                    className="adminButton adminChatRefresh"
+                    onClick={loadCommunication}
+                    disabled={communicationLoading || Boolean(mutating)}
+                  >
+                    <RotateCcw size={14} />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="adminSensitiveNotice adminChatSafety">
+                Never request passwords, 2FA codes, card details, or account
+                credentials.
+              </div>
+
+              <div className="adminChatViewportShell">
+                {communicationLoading && messages.length === 0 ? (
+                  <div className="adminChatLoading" role="status">
+                    <Loader2 className="adminSpinner" size={18} /> Loading
+                    conversation…
+                  </div>
+                ) : null}
+                <ol
+                  className="adminChatMessages adminChatViewport"
+                  ref={chatViewportRef}
+                  onScroll={handleChatScroll}
+                >
+                  {messages.length === 0 && !communicationLoading ? (
+                    <li className="empty">
+                      No messages yet. Start with a clear order update.
+                    </li>
+                  ) : (
+                    messages.map((message) => (
+                      <li
+                        className={
+                          message.senderType === "admin" ? "staff" : "customer"
+                        }
+                        key={message.id}
+                      >
+                        <div className="adminMessageMeta">
+                          <strong>
+                            {message.senderType === "admin"
+                              ? "MehtaXD"
+                              : message.senderLabel}
+                          </strong>
+                          <time>{date(message.createdAt)}</time>
+                        </div>
+                        <p>{message.body}</p>
+                        {message.senderType === "admin" ? (
+                          <span
+                            className={`adminMessageReceipt ${message.receiptStatus}`}
+                            aria-label={message.receiptLabel}
+                            title={message.receiptLabel}
+                          >
+                            <span
+                              className="adminReceiptTicks"
+                              aria-hidden="true"
+                            >
+                              {message.pending
+                                ? "…"
+                                : message.receiptStatus === "sent"
+                                  ? "✓"
+                                  : "✓✓"}
+                            </span>
+                            <span>
+                              {message.pending
+                                ? "Sending"
+                                : message.receiptLabel}
+                            </span>
+                          </span>
+                        ) : null}
+                      </li>
+                    ))
+                  )}
+                </ol>
+                {showNewest ? (
+                  <button
+                    className="adminChatJump"
+                    type="button"
+                    onClick={() => scrollToNewest()}
+                  >
+                    <ChevronDown size={15} /> Jump to newest
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="adminChatComposer">
+                <label className="srOnly" htmlFor="admin-chat-body">
+                  Reply to customer
+                </label>
+                <textarea
+                  id="admin-chat-body"
+                  value={chatBody}
+                  rows={1}
+                  maxLength={4000}
+                  onChange={(event) => setChatBody(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      !event.nativeEvent.isComposing
+                    ) {
+                      event.preventDefault();
+                      if (chatBody.trim() && !mutating) void sendAdminMessage();
+                    }
+                  }}
+                  placeholder="Write an order update…"
+                />
+                <button
+                  className="adminButton primary adminChatSend"
+                  onClick={sendAdminMessage}
+                  disabled={!chatBody.trim() || Boolean(mutating)}
+                >
+                  <span>{mutating === "chat" ? "Sending…" : "Send"}</span>
+                  <ArrowIcon size={16} />
+                </button>
+              </div>
+            </div>
+          </section>
+        </section>
+        <aside className="adminOrderSide">
+          <section className="adminPanel adminOrderCustomer">
+            <h2>Customer</h2>
+            <a href={`mailto:${order.customerEmail}`}>{order.customerEmail}</a>
+            {order.customerId ? (
+              <Link
+                className="adminTextLink"
+                href={`/admin/customers/${order.customerId}`}
+              >
+                Open customer record →
+              </Link>
+            ) : null}
+          </section>
+          <OrderRefunds orderId={order.id} onChanged={loadOrder}>
+            <p className="adminOrderFinancialState">
+              Financial status: {badge(financialState)}
+            </p>
+            <details
+              className="adminOrderPaymentHistory"
+              open={reconciliationPayments.length > 0}
+            >
+              <summary>Payment history</summary>
+              <div className="adminOrderCommunication">
+                <div className="adminPanelHead">
+                  <h2>Payments</h2>
+                  <button
+                    className="adminButton"
+                    onClick={loadPayments}
+                    disabled={paymentsLoading}
+                  >
+                    {paymentsLoading ? "Loading…" : "Refresh payments"}
+                  </button>
+                </div>
+                {payments.length === 0 ? (
+                  <p className="adminMuted">No payment attempts.</p>
+                ) : (
+                  <div className="adminPaymentAttempts">
+                    {payments.map((payment) => (
+                      <article key={payment.id}>
+                        <div>
+                          <strong>
+                            {money(payment.amountMinor, payment.currency)}
+                          </strong>
+                          {badge(payment.status)}
+                        </div>
+                        <p>
+                          {payment.provider === "wallet"
+                            ? "Store Credit"
+                            : `${label(payment.provider)} provider`}{" "}
+                          · {date(payment.createdAt)}
+                        </p>
+                        {payment.reconciliationRequired ? (
+                          <p role="alert">
+                            Reconciliation required:{" "}
+                            {payment.reconciliationReason ??
+                              "Review this payment and Order."}
+                          </p>
+                        ) : null}
+                        <button
+                          className="adminButton"
+                          onClick={() => loadPaymentEvents(payment.id)}
+                        >
+                          {selectedPaymentId === payment.id
+                            ? "Events selected"
+                            : "View events"}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                {selectedPaymentId ? (
+                  <ol className="adminOrderEvents adminPaymentEvents">
+                    {paymentEvents.length === 0 ? (
+                      <li>No provider events.</li>
+                    ) : (
+                      paymentEvents.map((event) => (
+                        <li key={event.id}>
+                          <strong>{label(event.eventType)}</strong>
+                          <span>{label(event.status)}</span>
+                          <small>{date(event.createdAt)}</small>
+                        </li>
+                      ))
+                    )}
+                  </ol>
+                ) : null}
+              </div>
+            </details>
+            <details className="adminOrderTotalsDetails">
+              <summary>Order totals</summary>
+              <dl className="adminOrderFacts">
+                <div>
+                  <dt>Subtotal</dt>
+                  <dd>{money(order.subtotalMinor, order.currency)}</dd>
                 </div>
                 <div>
-                  <span>
-                    {[item.gameName, item.categoryName]
-                      .filter(Boolean)
-                      .join(" / ") || item.productType}
-                  </span>
-                  <h3>{item.productName}</h3>
-                  {item.variantLabel && item.variantLabel !== "Default" ? (
-                    <p>
-                      <strong>Variant:</strong> {item.variantLabel}
-                    </p>
-                  ) : null}
-                  {optionEntries(item.selectedOptions).length ? (
-                    <dl className="adminOrderItemOptions">
-                      {optionEntries(item.selectedOptions).map(
-                        ([name, value]) => (
-                          <div key={name}>
-                            <dt>{name}</dt>
-                            <dd>{value}</dd>
-                          </div>
-                        ),
-                      )}
-                    </dl>
-                  ) : null}
-                  <p>
-                    {item.deliveryInformation || "No delivery note stored."}
-                  </p>
+                  <dt>Discount</dt>
+                  <dd>{money(order.discountMinor, order.currency)}</dd>
                 </div>
-                <dl>
-                  <div>
-                    <dt>Quantity</dt>
-                    <dd>{item.quantity}</dd>
-                  </div>
-                  <div>
-                    <dt>Unit</dt>
-                    <dd>{money(item.unitPriceMinor, item.currency)}</dd>
-                  </div>
-                  <div>
-                    <dt>Line</dt>
-                    <dd>{money(item.lineTotalMinor, item.currency)}</dd>
-                  </div>
-                </dl>
-              </article>
-            ))}
-          </div>
-        </section>
+                <div>
+                  <dt>Tax</dt>
+                  <dd>{money(order.taxMinor, order.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Fee</dt>
+                  <dd>{money(order.feeMinor, order.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Order total</dt>
+                  <dd>{money(order.totalMinor, order.currency)}</dd>
+                </div>
+              </dl>
+            </details>
+          </OrderRefunds>
+          <details className="adminOrderActivity adminPanel">
+            <summary>Activity &amp; technical details</summary>
+            <section>
+              <div className="adminPanelHead">
+                <h2>Lifecycle</h2>
+              </div>
+              <dl className="adminOrderFacts">
+                <div>
+                  <dt>Created</dt>
+                  <dd>{date(order.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt>Expires</dt>
+                  <dd>{date(order.expiresAt)}</dd>
+                </div>
+                <div>
+                  <dt>Paid</dt>
+                  <dd>{date(order.paidAt)}</dd>
+                </div>
+                <div>
+                  <dt>Cancelled</dt>
+                  <dd>{date(order.cancelledAt)}</dd>
+                </div>
+                <div>
+                  <dt>Completed</dt>
+                  <dd>{date(order.completedAt)}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{date(order.updatedAt)}</dd>
+                </div>
+              </dl>
+            </section>
 
-        <aside className="adminOrderSide">
-          <section className="adminPanel">
-            <div className="adminPanelHead">
-              <h2>Totals</h2>
-            </div>
+            <section>
+              <div className="adminPanelHead">
+                <h2>Events</h2>
+              </div>
+              <ol className="adminOrderEvents">
+                {(order.events || []).map((event) => (
+                  <li key={event.id}>
+                    <strong>{eventText(event)}</strong>
+                    <span>{event.actorType}</span>
+                    <small>{date(event.createdAt)}</small>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
             <dl className="adminOrderFacts">
               <div>
-                <dt>Subtotal</dt>
-                <dd>{money(order.subtotalMinor, order.currency)}</dd>
+                <dt>Internal ID</dt>
+                <dd>{order.id}</dd>
               </div>
               <div>
-                <dt>Discount</dt>
-                <dd>{money(order.discountMinor, order.currency)}</dd>
-              </div>
-              <div>
-                <dt>Tax</dt>
-                <dd>{money(order.taxMinor, order.currency)}</dd>
-              </div>
-              <div>
-                <dt>Fee</dt>
-                <dd>{money(order.feeMinor, order.currency)}</dd>
-              </div>
-              <div>
-                <dt>Paid</dt>
-                <dd>{money(order.paidMinor, order.currency)}</dd>
-              </div>
-              <div>
-                <dt>Refunded</dt>
-                <dd>{money(order.refundedMinor, order.currency)}</dd>
+                <dt>Version</dt>
+                <dd>{order.version}</dd>
               </div>
             </dl>
-          </section>
-
-          <section className="adminPanel">
-            <div className="adminPanelHead">
-              <h2>Lifecycle</h2>
-            </div>
-            <dl className="adminOrderFacts">
-              <div>
-                <dt>Expires</dt>
-                <dd>{date(order.expiresAt)}</dd>
-              </div>
-              <div>
-                <dt>Paid</dt>
-                <dd>{date(order.paidAt)}</dd>
-              </div>
-              <div>
-                <dt>Cancelled</dt>
-                <dd>{date(order.cancelledAt)}</dd>
-              </div>
-              <div>
-                <dt>Completed</dt>
-                <dd>{date(order.completedAt)}</dd>
-              </div>
-              <div>
-                <dt>Updated</dt>
-                <dd>{date(order.updatedAt)}</dd>
-              </div>
-            </dl>
-          </section>
-
-          <section className="adminPanel">
-            <div className="adminPanelHead">
-              <h2>Events</h2>
-            </div>
-            <ol className="adminOrderEvents">
-              {(order.events || []).map((event) => (
-                <li key={event.id}>
-                  <strong>{eventText(event)}</strong>
-                  <span>{event.actorType}</span>
-                  <small>{date(event.createdAt)}</small>
-                </li>
-              ))}
-            </ol>
-          </section>
+          </details>
         </aside>
       </div>
     </>

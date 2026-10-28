@@ -11,7 +11,7 @@ const endpoint = `/admin/orders/${orderId}/deliveries/${deliveryId}/evidence.pdf
 const origin = "http://localhost:3001";
 const pdf = new TextEncoder().encode("%PDF-1.3\nfixture");
 
-function harness({ token = "test-admin-token", status = 200 } = {}) {
+function harness({ token = "test-admin-token", status = 200, mime = "application/pdf" } = {}) {
   const calls = [];
   function load(file, dependencies = {}, fetchImpl) {
     const filename = path.resolve(__dirname, "..", file);
@@ -79,7 +79,7 @@ function harness({ token = "test-admin-token", status = 200 } = {}) {
       return new Response(pdf, {
         status: 200,
         headers: {
-          "Content-Type": "application/pdf",
+          "Content-Type": mime,
           "Content-Disposition":
             'attachment; filename="MehtaXD-dispute-evidence-MXD-26-TEST.pdf"',
           "Cache-Control": "private, no-store",
@@ -180,4 +180,21 @@ test("missing Admin cookie cannot be replaced with access to the PDF route", asy
   const h = harness({ token: null });
   assert.equal((await h.send("GET")).status, 401);
   assert.equal(h.calls.length, 0);
+});
+
+test("exact authorized attachment routes stream image bytes, not JSON or provider URLs", async () => {
+  const h = harness({ mime: "image/png" });
+  const target = `/admin/orders/${orderId}/deliveries/${deliveryId}/attachments/${orderId}`;
+  const response = await h.send("GET", target);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.deepEqual(Buffer.from(await response.arrayBuffer()), Buffer.from(pdf));
+  assert.equal((await h.send("GET", target + "?url=external")).status, 404);
+  assert.equal((await harness({token:null}).send("GET", target)).status, 401);
+});
+test("delivery image proxy rejects unexpected active content types", async () => {
+  const h = harness({mime:"text/html"});
+  const response = await h.send("GET", `/admin/orders/${orderId}/deliveries/${deliveryId}/attachments/${orderId}`);
+  assert.equal(response.status,503);
+  assert.match(response.headers.get("content-type"), /application\/json/);
 });

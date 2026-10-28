@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   nestjsApi,
   type AdminRefundSummary,
@@ -19,9 +25,11 @@ const destinationLabel = (value: string) =>
 export function OrderRefunds({
   orderId,
   onChanged,
+  children,
 }: {
   orderId: string;
   onChanged: () => Promise<void>;
+  children?: ReactNode;
 }) {
   const [summary, setSummary] = useState<AdminRefundSummary | null>(null);
   const [open, setOpen] = useState(false);
@@ -241,11 +249,11 @@ export function OrderRefunds({
 
   return (
     <section
-      className="adminOrderCommunication adminRefunds"
+      className="adminPanel adminFinancialSummary adminRefunds"
       aria-labelledby="refund-heading"
     >
       <div className="adminPanelHead">
-        <h2 id="refund-heading">Refunds</h2>
+        <h2 id="refund-heading">Financial summary</h2>
         <button
           className="adminButton"
           type="button"
@@ -320,28 +328,38 @@ export function OrderRefunds({
             </p>
           )}
           {summary.history.length ? (
-            <ol className="adminRefundHistory">
-              {summary.history.map((r) => (
-                <li key={r.id}>
-                  <strong>
-                    {money(r.amountMinor, r.currency)} ·{" "}
-                    {r.scope === "full" ? "Full" : "Partial"} ·{" "}
-                    {destinationLabel(r.destination)}
-                  </strong>
-                  <p>
-                    {r.status.replaceAll("_", " ")} ·{" "}
-                    {new Date(r.createdAt).toLocaleString()}
-                  </p>
-                  <p>{r.reason}</p>
-                  <small>
-                    Admin {r.adminUserId} · Refund {r.id}
-                    {r.externalReference
-                      ? ` · Reference ${r.externalReference}`
-                      : ""}
-                  </small>
-                </li>
-              ))}
-            </ol>
+            <details
+              className="adminRefundHistoryDetails"
+              open={summary.history.some(
+                (refund) =>
+                  refund.status === "pending" ||
+                  refund.status === "needs_review",
+              )}
+            >
+              <summary>Refund history ({summary.history.length})</summary>
+              <ol className="adminRefundHistory">
+                {summary.history.map((r) => (
+                  <li key={r.id}>
+                    <strong>
+                      {money(r.amountMinor, r.currency)} ·{" "}
+                      {r.scope === "full" ? "Full" : "Partial"} ·{" "}
+                      {destinationLabel(r.destination)}
+                    </strong>
+                    <p>
+                      {r.status.replaceAll("_", " ")} ·{" "}
+                      {new Date(r.createdAt).toLocaleString()}
+                    </p>
+                    <p>{r.reason}</p>
+                    <small>
+                      Admin {r.adminUserId} · Refund {r.id}
+                      {r.externalReference
+                        ? ` · Reference ${r.externalReference}`
+                        : ""}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            </details>
           ) : (
             <p className="adminMuted">No refunds recorded.</p>
           )}
@@ -351,6 +369,7 @@ export function OrderRefunds({
           Load authoritative refund history before issuing a refund.
         </p>
       )}
+      {children}
       {open && summary && (
         <dialog
           ref={dialog}

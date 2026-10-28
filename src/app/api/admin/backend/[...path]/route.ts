@@ -24,11 +24,13 @@ const allowed: Record<string, RegExp[]> = {
     new RegExp(
       `^admin/orders/${customerUuid}/deliveries/${customerUuid}/evidence\\.pdf$`,
     ),
+    new RegExp(`^admin/orders/${customerUuid}/deliveries/${customerUuid}/attachments/${customerUuid}$`),
     new RegExp(`^admin/orders/${uuid}/payments(\\?.*)?$`),
     new RegExp(`^admin/orders/${customerUuid}/refunds$`),
     new RegExp(`^admin/payments/${uuid}/events(\\?.*)?$`),
   ],
   POST: [
+    new RegExp(`^admin/orders/${customerUuid}/deliveries/${customerUuid}/evidence/retry$`),
     /^admin\/payment-profiles$/,
     /^games$/,
     new RegExp(`^games/${uuid}/(categories|products)$`),

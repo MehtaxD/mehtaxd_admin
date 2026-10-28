@@ -84,6 +84,7 @@ async function refresh(refreshToken: string): Promise<TokenPayload | null> {
 
 const evidencePdfPath =
   /^\/admin\/orders\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/deliveries\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\/evidence\.pdf$/;
+const evidenceImagePath = /^\/admin\/orders\/[0-9a-fA-F-]{36}\/deliveries\/[0-9a-fA-F-]{36}\/attachments\/[0-9a-fA-F-]{36}$/;
 
 export async function adminBackend(path: string, init: RequestInit = {}, binary = false) {
   const jar = await cookies();
@@ -100,7 +101,25 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
     rotated = await refresh(refreshToken);
     if (rotated) { accessToken = rotated.accessToken; upstream = await send(); }
   }
-  const body = binary ? await upstream.arrayBuffer() : await upstream.text();
+  let body: ArrayBuffer | string;
+  if(binary && upstream.ok) {
+    const image = evidenceImagePath.test(path);
+    const mime = upstream.headers.get("content-type")?.split(";")[0];
+    if(!mime || !(image ? ["image/png","image/jpeg","image/webp"] : ["application/pdf"]).includes(mime) || !upstream.body) throw new Error("Invalid evidence response");
+    const limit = (image ? 5 : 40) * 1024 * 1024;
+    const reader = upstream.body.getReader(); const chunks: Uint8Array[]=[]; let size=0;
+    try {
+      while(true) {
+        const {done,value}=await reader.read(); if(done)break;
+        size+=value.byteLength;
+        if(size>limit){await reader.cancel();throw new Error("Evidence response too large");}
+        chunks.push(value);
+      }
+    } finally {reader.releaseLock();}
+    const bytes=new Uint8Array(size);let offset=0;
+    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+    body=bytes.buffer;
+  } else body = binary ? await upstream.arrayBuffer() : await upstream.text();
   if (!upstream.ok) {
     let refundOutcome: "rejected" | undefined;
     if (init.method === "POST" && /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(path) && [400, 409, 422].includes(upstream.status)) {
@@ -143,7 +162,7 @@ export async function adminBackend(path: string, init: RequestInit = {}, binary 
   if (binary) {
     const disposition = upstream.headers.get("content-disposition");
     if (disposition) headers.set("Content-Disposition", disposition);
-    headers.set("Cache-Control", upstream.headers.get("cache-control") || "private, no-store");
+    headers.set("Cache-Control", "private, no-store");
     headers.set("X-Content-Type-Options", "nosniff");
   }
   const response = new NextResponse(body || null, {
@@ -167,7 +186,7 @@ export async function proxyAdminRequest(request: Request, backendPath: string) {
   const headers: Record<string, string> = {};
   if (body) headers["Content-Type"] = "application/json";
   // This existing customer action requires a caller key, never caller auth headers.
-  if (method === "POST" && (/^\/admin\/customers\/[0-9a-fA-F-]{36}\/wallet\/credits$/.test(backendPath) || /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(backendPath))) {
+  if (method === "POST" && (/^\/admin\/customers\/[0-9a-fA-F-]{36}\/wallet\/credits$/.test(backendPath) || /^\/admin\/orders\/[0-9a-fA-F-]{36}\/(refunds|deliveries)$/.test(backendPath))) {
     const key = request.headers.get("idempotency-key");
     if (key !== null) headers["Idempotency-Key"] = key;
   }
@@ -175,5 +194,5 @@ export async function proxyAdminRequest(request: Request, backendPath: string) {
     method,
     headers,
     ...(body ? { body } : {}),
-  }, evidencePdfPath.test(backendPath));
+  }, evidencePdfPath.test(backendPath) || evidenceImagePath.test(backendPath));
 }

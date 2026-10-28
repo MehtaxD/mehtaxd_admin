@@ -6,14 +6,15 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-test("order chat is promoted ahead of the lower operational detail grid", () => {
+test("conversation follows Items and Delivery inside the shared work column", () => {
   const page = read("src/app/admin/orders/[id]/page.tsx");
   assert.ok(
-    page.indexOf('className="adminOrderChatWorkspace"') <
-      page.indexOf('className="adminOrderDetailGrid"'),
+    page.indexOf('className="adminOrderDetailGrid adminOrderLayout"') <
+      page.indexOf('className="adminOrderChatWorkspace"'),
   );
-  assert.match(page, /aria-label="Order support context"/);
-  assert.match(page, /latestPayment \? badge\(latestPayment\.status\)/);
+  assert.ok(page.indexOf('className="adminOrderItemsSection"') < page.indexOf('className="adminOrderChatWorkspace"'));
+  assert.doesNotMatch(page, /aria-label="Order support context"/);
+  assert.match(page, /badge\(financialState\)/);
 });
 
 test("conversation uses a bounded scroll viewport and compact keyboard composer", () => {

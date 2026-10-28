@@ -195,6 +195,14 @@ test("zero remaining disables refund; non-USD disables Store Credit", () => {
     true,
   );
 });
+test("routine refund history is collapsed but unresolved history stays open", () => {
+  for (const status of ["succeeded", "pending", "needs_review"]) {
+    const h = harness({ history: [{ id: "refund", status, amountMinor: 100, currency: "USD", scope: "partial", destination: "store_credit", createdAt: "2026-10-26T08:00:00Z" }] });
+    const history = h.find((n) => n.type === "details" && n.props.className === "adminRefundHistoryDetails");
+    assert.equal(history.props.open, status !== "succeeded");
+    assert.equal(h.button("Check refund status").props.disabled, false);
+  }
+});
 test("manual path requires payment reference and explicit external confirmation", async () => {
   const h = harness();
   h.open();

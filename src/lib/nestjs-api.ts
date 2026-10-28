@@ -45,6 +45,7 @@ async function request<T>(
     if (fields && typeof fields === "object" && !Array.isArray(fields))
       throw new AdminFieldError(safe.message, fields as Record<string, string>);
     throw Object.assign(new Error(safe.message), {
+      status: response.status,
       refundOutcome: /^\/admin\/orders\/[0-9a-fA-F-]{36}\/refunds$/.test(endpoint) && options.method === "POST" && [400, 409, 422].includes(response.status) && errorData && typeof errorData === "object" && Reflect.get(errorData, "refundOutcome") === "rejected" ? "rejected" : undefined,
     });
   }
@@ -508,9 +509,19 @@ export const nestjsApi = {
       request<AdminPaymentAttempt[]>(`/admin/orders/${id}/payments`),
     getPaymentEvents: (paymentId: string) =>
       request<AdminPaymentEvent[]>(`/admin/payments/${paymentId}/events`),
-    createDelivery: (id: string, data: CreateDeliveryDto) =>
+    retryDeliveryEvidence: (id:string,deliveryId:string) => request<{id:string;status:string}>(`/admin/orders/${id}/deliveries/${deliveryId}/evidence/retry`,{method:"POST",body:"{}",signal:AbortSignal.timeout(30_000)}),
+    uploadDeliveryImage: async (id:string,file:File):Promise<DeliveryAttachment> => {
+      const body=new FormData(); body.set("file",file);
+      const response=await fetch(`/api/admin/orders/${id}/delivery-images`,{method:"POST",credentials:"same-origin",body});
+      const payload:unknown=await response.json().catch(()=>null);
+      if(!response.ok)throw new Error(safeAdminErrorFromPayload(response.status,payload).message);
+      return payload as DeliveryAttachment;
+    },
+    createDelivery: (id: string, data: CreateDeliveryDto, key?:string) =>
       request<OrderDelivery>(`/admin/orders/${id}/deliveries`, {
         method: "POST",
+        signal:AbortSignal.timeout(30_000),
+        headers:key?{"Idempotency-Key":key}:undefined,
         body: JSON.stringify(data),
       }),
     chatInbox: () => request<AdminChatInbox>("/admin/order-chats"),
@@ -893,7 +904,10 @@ export interface OrderDelivery {
   acknowledgementIntegrityStatus?:
     "valid" | "invalid" | "missing" | "not_applicable";
   acknowledgement?: AdminDeliveryAcknowledgement | null;
+  attachments?: DeliveryAttachment[];
+  evidencePdf?: {id?:string;status:"pending"|"ready"|"legacy";generatedAt?:string;sha256?:string|null}|null;
 }
+export interface DeliveryAttachment {id:string;mimeType:string;sizeBytes:number;createdAt:string;}
 
 export interface AdminDeliveryAcknowledgement {
   evidenceVersion: string;
@@ -937,7 +951,9 @@ export interface CreateDeliveryDto {
   deliveryType: "text" | "code" | "instructions";
   orderItemId?: string;
   customerVisibleSummary?: string;
-  payload: string;
+  payload?: string;
+  attachmentIds?:string[];
+  recoverMissing?:boolean;
   expectedVersion: number;
 }
 
