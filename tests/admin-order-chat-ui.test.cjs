@@ -24,7 +24,7 @@ test("conversation uses a bounded scroll viewport and compact keyboard composer"
   assert.match(page, /ref=\{chatViewportRef\}/);
   assert.match(page, /onScroll=\{handleChatScroll\}/);
   assert.match(page, /Jump to newest/);
-  assert.match(page, /event\.key === "Enter" && !event\.shiftKey/);
+  assert.match(page, /event\.key === "Enter"\s*&&\s*!event\.shiftKey\s*&&\s*!event\.nativeEvent\.isComposing/);
   assert.match(css, /\.adminChatViewport\s*\{[\s\S]*?height:\s*clamp\([\s\S]*?overflow-y:\s*auto/);
   assert.match(css, /\.adminOrderChatPanel \.adminChatComposer textarea\s*\{[\s\S]*?min-height:\s*44px[\s\S]*?max-height:\s*132px/);
   assert.match(css, /\.adminChatSend\s*\{[\s\S]*?min-height:\s*44px/);
