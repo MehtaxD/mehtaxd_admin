@@ -12,6 +12,7 @@ type CategoryFormData = {
   name: string;
   slug: string;
   description: string;
+  iconUrl: string;
   status: "draft" | "published" | "archived";
   sortOrder: number;
 };
@@ -21,6 +22,7 @@ const empty: CategoryFormData = {
   name: "",
   slug: "",
   description: "",
+  iconUrl: "",
   status: "published",
   sortOrder: 0,
 };
@@ -34,6 +36,7 @@ export default function CategoryEditorPage() {
   const [form, setForm] = useState<CategoryFormData>(empty);
   const [games, setGames] = useState<Game[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEditing);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
@@ -65,6 +68,7 @@ export default function CategoryEditorPage() {
         name: category.name,
         slug: category.slug,
         description: category.description,
+        iconUrl: category.iconUrl ?? "",
         status: category.status,
         sortOrder: category.sortOrder,
       });
@@ -80,8 +84,23 @@ export default function CategoryEditorPage() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  async function uploadArtwork(file: File) {
+    setUploading(true);
+    setMessage("");
+    try {
+      const { url } = await nestjsApi.products.uploadMedia(file);
+      set("iconUrl", url);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not upload category artwork");
+      setMessageType("error");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (uploading) return;
     setSaving(true);
     setMessage("");
 
@@ -90,6 +109,7 @@ export default function CategoryEditorPage() {
         name: form.name,
         slug: finalizeSlug(form.slug || form.name),
         description: form.description,
+        iconUrl: form.iconUrl || undefined,
         status: form.status,
         sortOrder: form.sortOrder,
       };
@@ -131,7 +151,7 @@ export default function CategoryEditorPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Link className="adminButton" href="/admin/categories">Cancel</Link>
-          <button className="adminButton primary" disabled={saving} type="submit">
+          <button className="adminButton primary" disabled={saving || uploading} type="submit">
             {saving ? <Loader2 size={16} /> : "Save category"}
           </button>
         </div>
@@ -173,6 +193,25 @@ export default function CategoryEditorPage() {
           <div className="adminField full">
             <label>Description</label>
             <textarea value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Coins, cash and balance packages..." rows={3} />
+          </div>
+
+          <div className="adminField full">
+            <label htmlFor="category-artwork">Category artwork</label>
+            {form.iconUrl && <a href={form.iconUrl} target="_blank" rel="noreferrer">View artwork</a>}
+            <input
+              id="category-artwork"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={saving || uploading}
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (file) void uploadArtwork(file);
+              }}
+            />
+            <span className="adminHint" role="status">
+              {uploading ? "Uploading image…" : "Choose an image, then save the category to publish it."}
+            </span>
           </div>
 
           <div className="adminField">

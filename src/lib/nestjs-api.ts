@@ -1197,6 +1197,7 @@ export interface Category {
   name: string;
   slug: string;
   description: string;
+  iconUrl?: string | null;
   status: "draft" | "published" | "archived";
   sortOrder: number;
   createdAt: string;
@@ -1207,6 +1208,7 @@ export interface CreateCategoryDto {
   name: string;
   slug?: string;
   description?: string;
+  iconUrl?: string;
   status?: "draft" | "published" | "archived";
   sortOrder?: number;
 }
